@@ -17,6 +17,8 @@ import {
 import { Knowledge, MetaType, PropertyDefinition, Tag } from '../../types/index.js';
 import { api } from '../../services/api.js';
 import { TagPicker } from '../../components/shared/TagPicker.js';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog.js';
+import { useLanguage, TranslatedText } from '../../i18n/LanguageContext.js';
 
 interface KnowledgeViewProps {
   onSelectEntity: (id: string) => void;
@@ -29,6 +31,7 @@ export const KnowledgeView: React.FC<KnowledgeViewProps> = ({
   openCreateTrigger,
   onResetCreateTrigger,
 }) => {
+  const { language, t } = useLanguage();
   const [items, setItems] = useState<Knowledge[]>([]);
   const [metaTypes, setMetaTypes] = useState<MetaType[]>([]);
   const [propertyDefs, setPropertyDefs] = useState<PropertyDefinition[]>([]);
@@ -37,6 +40,9 @@ export const KnowledgeView: React.FC<KnowledgeViewProps> = ({
   const [selectedTagFilter, setSelectedTagFilter] = useState('');
   const [searchQ, setSearchQ] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Delete Dialog State
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Meta Schema Manager Modal
   const [isManagingSchema, setIsManagingSchema] = useState(false);
@@ -172,14 +178,17 @@ export const KnowledgeView: React.FC<KnowledgeViewProps> = ({
     }
   };
 
-  const handleDeleteItem = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this knowledge item?')) return;
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const id = itemToDelete.id;
     try {
+      setItems((prev) => prev.filter((it) => it.id !== id));
+      setItemToDelete(null);
       await api.knowledge.delete(id);
       await loadData();
     } catch (err) {
-      console.error(err);
+      console.error('Failed to delete knowledge item:', err);
+      await loadData();
     }
   };
 
@@ -322,9 +331,15 @@ export const KnowledgeView: React.FC<KnowledgeViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={(e) => handleDeleteItem(e, item.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition-all"
-                    title="Delete item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setItemToDelete({
+                        id: item.id,
+                        name: item.title,
+                      });
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                    title={language === 'it' ? 'Elimina elemento' : 'Delete item'}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -332,7 +347,7 @@ export const KnowledgeView: React.FC<KnowledgeViewProps> = ({
 
                 {item.description && (
                   <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                    {item.description}
+                    <TranslatedText text={item.description} />
                   </p>
                 )}
 
@@ -754,19 +769,35 @@ export const KnowledgeView: React.FC<KnowledgeViewProps> = ({
                   onClick={() => setIsCreatingItem(false)}
                   className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-medium"
                 >
-                  Cancel
+                  {language === 'it' ? 'Annulla' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-xs"
                 >
-                  Save Knowledge Item
+                  {language === 'it' ? 'Salva Elemento' : 'Save Knowledge Item'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(itemToDelete)}
+        title={language === 'it' ? 'Elimina Elemento Knowledge' : 'Delete Knowledge Item'}
+        itemName={itemToDelete?.name}
+        message={
+          language === 'it'
+            ? 'Sei sicuro di voler eliminare questo elemento dalla knowledge base?'
+            : 'Are you sure you want to delete this item from the knowledge base?'
+        }
+        confirmLabel={language === 'it' ? 'Elimina Elemento' : 'Delete Item'}
+        cancelLabel={language === 'it' ? 'Annulla' : 'Cancel'}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setItemToDelete(null)}
+      />
     </div>
   );
 };

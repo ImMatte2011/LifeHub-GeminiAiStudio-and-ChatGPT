@@ -17,6 +17,8 @@ import {
 import { Place, Tag } from '../../types/index.js';
 import { api } from '../../services/api.js';
 import { TagPicker } from '../../components/shared/TagPicker.js';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog.js';
+import { useLanguage, TranslatedText } from '../../i18n/LanguageContext.js';
 
 interface PlacesViewProps {
   onSelectEntity: (id: string) => void;
@@ -33,6 +35,7 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
   openCreateTrigger,
   onResetCreateTrigger,
 }) => {
+  const { language, t } = useLanguage();
   const [places, setPlaces] = useState<Place[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [searchQ, setSearchQ] = useState('');
@@ -47,6 +50,9 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
     lng: 12.4964,
   }); // Rome center default
   const [radiusActive, setRadiusActive] = useState(false);
+
+  // Delete Dialog State
+  const [placeToDelete, setPlaceToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Create Place Modal
   const [isCreating, setIsCreating] = useState(false);
@@ -63,19 +69,21 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
     tags: [] as string[],
   });
 
-  // Leaflet map container ref
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const leafletMapRef = useRef<any>(null);
-  const markersGroupRef = useRef<any>(null);
-
   const loadData = async () => {
     setLoading(true);
     try {
-      const [resPlaces, tList] = await Promise.all([
-        api.places.list(),
-        api.shared.getTags(),
-      ]);
-      setPlaces(resPlaces.places);
+      if (radiusActive && mapsExtensionActive) {
+        const radiusRes = await api.places.queryRadius(
+          radiusCenter.lat,
+          radiusCenter.lng,
+          radiusKm
+        );
+        setPlaces(radiusRes.results);
+      } else {
+        const res = await api.places.list();
+        setPlaces(res.places);
+      }
+      const tList = await api.shared.getTags();
       setAllTags(tList);
     } catch (err) {
       console.error('Failed to load places:', err);
@@ -86,7 +94,7 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [radiusActive, radiusKm, radiusCenter]);
 
   useEffect(() => {
     if (openCreateTrigger) {
@@ -95,93 +103,24 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
     }
   }, [openCreateTrigger]);
 
-  // Leaflet Map Initialization & Updates
-  useEffect(() => {
-    if (!mapsExtensionActive || !mapContainerRef.current) {
-      if (leafletMapRef.current) {
-        leafletMapRef.current.remove();
-        leafletMapRef.current = null;
-      }
-      return;
-    }
-
-    const L = (window as any).L;
-    if (!L) return;
-
-    if (!leafletMapRef.current) {
-      const map = L.map(mapContainerRef.current).setView([41.9028, 12.4964], 12);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
-      }).addTo(map);
-
-      leafletMapRef.current = map;
-      markersGroupRef.current = L.layerGroup().addTo(map);
-
-      // Click on map to pick coordinates when modal is open
-      map.on('click', (e: any) => {
-        setFormData((prev) => ({
-          ...prev,
-          latitude: Number(e.latlng.lat.toFixed(5)),
-          longitude: Number(e.latlng.lng.toFixed(5)),
-        }));
-      });
-    }
-
-    // Refresh markers
-    if (markersGroupRef.current && L) {
-      markersGroupRef.current.clearLayers();
-
-      const bounds: any[] = [];
-
-      places.forEach((p) => {
-        if (p.latitude && p.longitude) {
-          const marker = L.marker([p.latitude, p.longitude]);
-          marker.bindPopup(`
-            <div style="font-family: sans-serif; min-width: 160px;">
-              <strong style="font-size: 13px; color: #111;">${p.name}</strong><br/>
-              <span style="font-size: 11px; color: #666;">${p.category}</span>
-              <p style="font-size: 11px; margin: 4px 0; color: #333;">${p.address || ''}</p>
-              <div style="font-size: 10px; color: #4f46e5; font-family: monospace;">GPS: ${p.latitude}, ${p.longitude}</div>
-            </div>
-          `);
-          marker.on('click', () => onSelectEntity(p.id));
-          markersGroupRef.current.addLayer(marker);
-          bounds.push([p.latitude, p.longitude]);
-        }
-      });
-
-      if (bounds.length > 0 && leafletMapRef.current) {
-        leafletMapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
-      }
-    }
-  }, [mapsExtensionActive, places]);
-
-  const handlePostGISRadiusSearch = async () => {
-    try {
-      setLoading(true);
-      const data = await api.places.queryRadius(radiusCenter.lat, radiusCenter.lng, radiusKm);
-      setPlaces(data.results);
-      setRadiusActive(true);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetRadius = () => {
-    setRadiusActive(false);
-    loadData();
-  };
-
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
     try {
-      await api.places.create(formData);
+      await api.places.create({
+        name: formData.name,
+        category: formData.category,
+        address: formData.address,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        description: formData.description,
+        opening_hours: formData.opening_hours,
+        website: formData.website,
+        phone: formData.phone,
+        tags: formData.tags,
+      });
+
       setIsCreating(false);
       setFormData({
         name: '',
@@ -201,14 +140,17 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this place?')) return;
+  const handleConfirmDelete = async () => {
+    if (!placeToDelete) return;
+    const id = placeToDelete.id;
     try {
+      setPlaces((prev) => prev.filter((p) => p.id !== id));
+      setPlaceToDelete(null);
       await api.places.delete(id);
       await loadData();
     } catch (err) {
-      console.error(err);
+      console.error('Failed to delete place:', err);
+      await loadData();
     }
   };
 
@@ -233,10 +175,12 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
         <div>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <MapPin className="w-5 h-5 text-amber-600" />
-            Places & Spatial Coordinates
+            {t.placesView?.title || (language === 'it' ? 'Luoghi & Coordinate Spaziali' : 'Places & Spatial Coordinates')}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Module <code className="text-blue-600 font-mono">places</code> • Requires extension <code className="text-blue-600 font-mono">maps</code> (PostGIS + Leaflet + OpenStreetMap).
+            {language === 'it'
+              ? 'Modulo places • Integrazione estensione maps (PostGIS + OpenStreetMap).'
+              : 'Module places • Requires extension maps (PostGIS + Leaflet + OpenStreetMap).'}
           </p>
         </div>
 
@@ -246,7 +190,8 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
             onClick={() => setIsCreating(true)}
             className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold flex items-center gap-2 shadow-sm shadow-amber-500/20 transition-all"
           >
-            <Plus className="w-4 h-4" /> Add Place
+            <Plus className="w-4 h-4" />{' '}
+            {t.placesView?.addPlace || (language === 'it' ? 'Aggiungi Luogo' : 'Add Place')}
           </button>
         </div>
       </div>
@@ -257,76 +202,39 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <span className="font-semibold text-amber-950">Extension System Demonstration: `maps` extension is disabled</span>
-              <p className="text-amber-800 leading-relaxed">
-                Notice how the <strong>Core and Places module continue working perfectly</strong> in graceful fallback mode with raw GPS coordinates and distance calculations. No errors are raised.
+              <span className="font-semibold text-amber-950">
+                {language === 'it'
+                  ? 'Estensione maps non attiva: Visualizzazione Coordinate Base'
+                  : 'Extension maps is disabled: Basic Coordinate Mode'}
+              </span>
+              <p className="text-amber-800 text-[11px] leading-relaxed">
+                {language === 'it'
+                  ? 'La mappa cartografica interattiva e le query spaziali PostGIS (ST_DWithin) sono disattivate. Puoi attivare l\'estensione maps in qualsiasi momento dal menu Impostazioni.'
+                  : 'Interactive cartography and PostGIS spatial queries (ST_DWithin) are disabled. You can activate the maps extension anytime from Settings.'}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onOpenExtensions}
-            className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium shrink-0 transition-colors shadow-2xs"
+            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold shrink-0 transition-colors shadow-2xs text-[11px]"
           >
-            Enable Maps
+            {language === 'it' ? 'Abilita Mappe' : 'Enable Maps'}
           </button>
         </div>
       )}
 
-      {/* Map or PostGIS Spatial Canvas */}
-      {mapsExtensionActive ? (
-        <div className="space-y-3">
-          <div className="h-80 sm:h-96 rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative bg-slate-100">
-            <div ref={mapContainerRef} className="w-full h-full z-10" />
-
-            {/* PostGIS Radius Filter Floating Badge */}
-            <div className="absolute top-3 right-3 z-20 p-3 rounded-xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg text-xs space-y-2 max-w-xs">
-              <div className="flex items-center justify-between gap-2 font-mono">
-                <span className="text-blue-700 font-semibold flex items-center gap-1">
-                  <Compass className="w-3.5 h-3.5 text-blue-600" /> PostGIS ST_DWithin
-                </span>
-                <span className="text-slate-600 font-semibold">{radiusKm} km radius</span>
-              </div>
-              <input
-                type="range"
-                min="5"
-                max="500"
-                value={radiusKm}
-                onChange={(e) => setRadiusKm(Number(e.target.value))}
-                className="w-full accent-blue-600"
-              />
-              <div className="flex justify-between gap-2">
-                {radiusActive ? (
-                  <button
-                    type="button"
-                    onClick={handleResetRadius}
-                    className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium border border-slate-200"
-                  >
-                    Reset Filter
-                  </button>
-                ) : (
-                  <span className="text-[10px] text-slate-500">Center: {radiusCenter.lat}, {radiusCenter.lng}</span>
-                )}
-                <button
-                  type="button"
-                  onClick={handlePostGISRadiusSearch}
-                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-[11px] shadow-2xs"
-                >
-                  Apply Radius
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Filter and Search Bar */}
+      {/* Filter and Spatial Controls */}
       <div className="p-3 bg-white border border-slate-200 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
         <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-md">
           <Search className="w-4 h-4 text-slate-400 shrink-0" />
           <input
             type="text"
-            placeholder="Search places by name, address, or description..."
+            placeholder={
+              language === 'it'
+                ? 'Cerca per nome luogo, indirizzo, note...'
+                : 'Search by place name, address, description...'
+            }
             value={searchQ}
             onChange={(e) => setSearchQ(e.target.value)}
             className="bg-transparent text-slate-900 placeholder:text-slate-400 w-full outline-none text-xs"
@@ -334,25 +242,43 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* PostGIS Radius Toggle */}
+          {mapsExtensionActive && (
+            <button
+              type="button"
+              onClick={() => setRadiusActive(!radiusActive)}
+              className={`px-3 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                radiusActive
+                  ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-2xs'
+                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5" />
+              {radiusActive ? `PostGIS: < ${radiusKm}km` : 'Filtro Raggio (PostGIS)'}
+            </button>
+          )}
+
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded text-slate-700 text-xs outline-none focus:border-blue-500"
+            className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded text-slate-700 text-xs outline-none"
           >
-            <option value="">All Categories</option>
-            {['Cultural', 'Home', 'Work', 'Restaurant', 'Outdoors', 'Facility', 'Travel'].map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
+            <option value="">{language === 'it' ? 'Tutte le Categorie' : 'All Categories'}</option>
+            {['Cultural', 'Home', 'Work', 'Restaurant', 'Outdoors', 'Facility', 'Travel', 'Other'].map(
+              (cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              )
+            )}
           </select>
 
           <select
             value={tagFilter}
             onChange={(e) => setTagFilter(e.target.value)}
-            className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded text-slate-700 text-xs outline-none focus:border-blue-500"
+            className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded text-slate-700 text-xs outline-none"
           >
-            <option value="">All Tags</option>
+            <option value="">{language === 'it' ? 'Tutti i Tag' : 'All Tags'}</option>
             {allTags.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -363,85 +289,122 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
       </div>
 
       {/* Places Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filteredPlaces.map((place) => (
-          <div
-            key={place.id}
-            onClick={() => onSelectEntity(place.id)}
-            className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 cursor-pointer transition-all hover:scale-[1.01] flex flex-col justify-between space-y-4 group shadow-2xs hover:shadow-md"
+      {filteredPlaces.length === 0 ? (
+        <div className="p-12 text-center bg-white border border-slate-200 rounded-2xl space-y-3">
+          <MapPin className="w-10 h-10 text-slate-300 mx-auto" />
+          <div className="text-sm font-semibold text-slate-700">
+            {language === 'it' ? 'Nessun luogo trovato' : 'No places found'}
+          </div>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            {language === 'it'
+              ? 'Nessun luogo corrisponde ai criteri di ricerca. Aggiungi un nuovo punto geografico.'
+              : 'No places match your filter criteria. Add a new geographic location.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsCreating(true)}
+            className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold inline-flex items-center gap-1.5"
           >
-            <div className="space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center font-bold text-amber-600 text-base shadow-2xs">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-sm text-slate-900 group-hover:text-amber-700 transition-colors">
+            <Plus className="w-3.5 h-3.5" />
+            {language === 'it' ? 'Aggiungi Luogo' : 'Add Place'}
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filteredPlaces.map((place) => (
+            <div
+              key={place.id}
+              onClick={() => onSelectEntity(place.id)}
+              className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 cursor-pointer transition-all hover:scale-[1.01] flex flex-col justify-between space-y-4 group shadow-2xs hover:shadow-md"
+            >
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shadow-2xs shrink-0">
+                      <MapPin className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-sm text-slate-900 group-hover:text-amber-600 transition-colors truncate">
                         {place.name}
                       </h3>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-mono bg-slate-100 text-slate-600 border border-slate-200">
-                        {place.category}
-                      </span>
-                    </div>
-                    {place.address && (
-                      <p className="text-xs text-slate-500 mt-0.5 truncate max-w-[220px]">
-                        {place.address}
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">
+                        {place.category} {place.address && `• ${place.address}`}
                       </p>
-                    )}
+                    </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPlaceToDelete({
+                        id: place.id,
+                        name: place.name,
+                      });
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                    title={language === 'it' ? 'Elimina luogo' : 'Delete place'}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={(e) => handleDelete(e, place.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition-all"
-                  title="Delete place"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              {place.description && (
-                <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                  {place.description}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-between text-[11px] font-mono text-slate-500">
-                <span>GPS: {place.latitude}, {place.longitude}</span>
-                {place.distance_km !== undefined && (
-                  <span className="text-blue-600 font-semibold">
-                    {place.distance_km} km away
-                  </span>
+                {place.description && (
+                  <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                    <TranslatedText text={place.description} />
+                  </p>
                 )}
               </div>
 
-              {/* Tags */}
-              {place.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {place.tags.map((t) => (
-                    <span
-                      key={t.id}
-                      className="px-2 py-0.5 rounded-full text-[10px] font-medium border"
-                      style={{
-                        backgroundColor: `${t.color}15`,
-                        borderColor: `${t.color}40`,
-                        color: t.color,
-                      }}
-                    >
-                      {t.name}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-500">
+                  <span>GPS: {place.latitude}, {place.longitude}</span>
+                  {place.distance_km !== undefined && (
+                    <span className="text-blue-600 font-semibold">
+                      {place.distance_km} km
                     </span>
-                  ))}
+                  )}
                 </div>
-              )}
+
+                {/* Tags */}
+                {place.tags && place.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {place.tags.map((t) => (
+                      <span
+                        key={t.id}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-medium border"
+                        style={{
+                          backgroundColor: `${t.color}15`,
+                          borderColor: `${t.color}40`,
+                          color: t.color,
+                        }}
+                      >
+                        {t.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(placeToDelete)}
+        title={language === 'it' ? 'Elimina Luogo' : 'Delete Place'}
+        itemName={placeToDelete?.name}
+        message={
+          language === 'it'
+            ? 'Sei sicuro di voler eliminare questo luogo? Verranno rimossi anche i metadati geografici associati.'
+            : 'Are you sure you want to delete this place? Associated geographic metadata will also be removed.'
+        }
+        confirmLabel={language === 'it' ? 'Elimina Luogo' : 'Delete Place'}
+        cancelLabel={language === 'it' ? 'Annulla' : 'Cancel'}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPlaceToDelete(null)}
+      />
 
       {/* Create Modal */}
       {isCreating && (
@@ -450,11 +413,12 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
             <div className="p-4 sm:p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-amber-600" />
-                Add Geographic Place
+                {language === 'it' ? 'Aggiungi Luogo Geografico' : 'Add Geographic Place'}
               </h2>
               <button
+                type="button"
                 onClick={() => setIsCreating(false)}
-                className="text-slate-400 hover:text-slate-700"
+                className="text-slate-400 hover:text-slate-700 p-1"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -463,7 +427,9 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
             <form onSubmit={handleCreate} className="p-4 sm:p-6 space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="text-slate-700 block mb-1 font-medium">Place Name *</label>
+                  <label className="text-slate-700 block mb-1 font-medium">
+                    {language === 'it' ? 'Nome Luogo *' : 'Place Name *'}
+                  </label>
                   <input
                     type="text"
                     required
@@ -473,7 +439,9 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-slate-700 block mb-1 font-medium">Category</label>
+                  <label className="text-slate-700 block mb-1 font-medium">
+                    {language === 'it' ? 'Categoria' : 'Category'}
+                  </label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
@@ -489,7 +457,9 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-700 block mb-1 font-medium">Address</label>
+                  <label className="text-slate-700 block mb-1 font-medium">
+                    {language === 'it' ? 'Indirizzo Civico' : 'Address'}
+                  </label>
                   <input
                     type="text"
                     value={formData.address}
@@ -498,7 +468,9 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-slate-700 block mb-1 font-mono font-medium">Latitude (PostGIS)</label>
+                  <label className="text-slate-700 block mb-1 font-mono font-medium">
+                    Latitudine (GPS / PostGIS)
+                  </label>
                   <input
                     type="number"
                     step="0.0001"
@@ -508,7 +480,9 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-slate-700 block mb-1 font-mono font-medium">Longitude (PostGIS)</label>
+                  <label className="text-slate-700 block mb-1 font-mono font-medium">
+                    Longitudine (GPS / PostGIS)
+                  </label>
                   <input
                     type="number"
                     step="0.0001"
@@ -520,7 +494,9 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
               </div>
 
               <div>
-                <label className="text-slate-700 block mb-1 font-medium">Description & Notes</label>
+                <label className="text-slate-700 block mb-1 font-medium">
+                  {language === 'it' ? 'Descrizione & Note' : 'Description & Notes'}
+                </label>
                 <textarea
                   rows={2}
                   value={formData.description}
@@ -531,7 +507,9 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
 
               {/* Tags */}
               <div>
-                <label className="text-slate-700 block mb-1 font-medium">Assign Tags</label>
+                <label className="text-slate-700 block mb-1 font-medium">
+                  {language === 'it' ? 'Assegna Tag' : 'Assign Tags'}
+                </label>
                 <TagPicker
                   allTags={allTags}
                   selectedTagIds={formData.tags}
@@ -545,13 +523,13 @@ export const PlacesView: React.FC<PlacesViewProps> = ({
                   onClick={() => setIsCreating(false)}
                   className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-medium"
                 >
-                  Cancel
+                  {language === 'it' ? 'Annulla' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold shadow-xs"
                 >
-                  Save Place
+                  {language === 'it' ? 'Salva Luogo' : 'Save Place'}
                 </button>
               </div>
             </form>

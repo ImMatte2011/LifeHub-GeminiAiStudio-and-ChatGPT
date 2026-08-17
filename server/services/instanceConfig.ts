@@ -69,6 +69,33 @@ export class InstanceConfigManager {
       }
     }
 
+    // Update database engine settings
+    if (parsed.database) {
+      db.instanceConfig.database = {
+        ...db.instanceConfig.database,
+        ...parsed.database,
+        local: {
+          ...(db.instanceConfig.database?.local || {
+            file_path: '/var/lib/lifehub/data.sqlite',
+            auto_sync: true,
+            backup_on_save: true,
+            format: 'sqlite',
+          }),
+          ...(parsed.database.local || {}),
+        },
+        cloud_sql: {
+          ...(db.instanceConfig.database?.cloud_sql || {
+            provider: 'google_cloud_sql',
+            region: 'europe-west2',
+            instance_id: 'ai-studio-80c1662d',
+            db_name: 'lifehub_main',
+            status: 'connected',
+          }),
+          ...(parsed.database.cloud_sql || {}),
+        },
+      };
+    }
+
     // Update settings
     if (parsed.settings) {
       db.instanceConfig.settings = {
@@ -95,12 +122,24 @@ export class InstanceConfigManager {
   static getPresets() {
     return {
       'second-brain': {
-        name: 'Second Brain (All Modules)',
+        name: 'Second Brain (Cloud SQL + All Modules)',
         yaml: `# LifeHub Instance Config - Complete Second Brain
 instance:
   name: "LifeHub — Personal Second Brain"
   description: "Unified knowledge, contacts, places, and events platform"
   host_env: "Raspberry Pi 4 (8GB RAM / SATA III SSD)"
+
+database:
+  engine: "cloud_sql" # Choices: cloud_sql | local_sqlite | local_file
+  active_instance: "lifehub_main"
+  cloud_sql:
+    provider: "google_cloud_sql"
+    region: "europe-west2"
+    instance_id: "ai-studio-80c1662d"
+    db_name: "lifehub_main"
+  local:
+    file_path: "/var/lib/lifehub/data.sqlite"
+    auto_sync: true
 
 modules:
   people: true
@@ -116,6 +155,40 @@ extensions:
 settings:
   multi_user_enabled: true
   default_role: "member"
+  language: "it"
+`,
+      },
+      'local-offline-rpi': {
+        name: 'Offline Local SQLite (PC / Raspberry Pi)',
+        yaml: `# LifeHub Instance Config - Standalone Local Storage
+instance:
+  name: "LifeHub — Local Offline Node"
+  description: "Runs entirely from local SQLite database file on PC / Raspberry Pi"
+  host_env: "Raspberry Pi 4 / Local Linux PC"
+
+database:
+  engine: "local_sqlite" # Standalone local database file (no cloud needed)
+  active_instance: "lifehub_local"
+  local:
+    file_path: "/var/lib/lifehub/data.sqlite"
+    auto_sync: true
+    backup_on_save: true
+
+modules:
+  people: true
+  places: true
+  events: true
+  knowledge: true
+  buildings: true
+
+extensions:
+  maps: true
+  pg_trgm: true
+
+settings:
+  multi_user_enabled: false
+  default_role: "admin"
+  language: "it"
 `,
       },
       'minimal-crm': {

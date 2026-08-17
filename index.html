@@ -5,17 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LifeHub — Modular Information Platform</title>
     <meta name="description" content="LifeHub — Modular, extensible personal information platform with clean architecture (Core, Meta, Shared, Domain Modules & Extensions)." />
-    <link rel="manifest" href="/public/manifest.json">
-    <link rel="icon" type="image/svg+xml" href="/public/icon.svg">
-    <meta name="theme-color" content="#2563eb">
+    
+    <!-- PWA Standard & iOS Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <link rel="apple-touch-icon" href="/icon.svg">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LifeHub">
+    <meta name="application-name" content="LifeHub">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
+    <!-- PWA Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/public/sw.js').catch(() => {});
+          navigator.serviceWorker.register('/sw.js').catch((err) => {
+            console.debug('PWA ServiceWorker registration skipped:', err);
+          });
         });
       }
     </script>

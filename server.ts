@@ -14,6 +14,7 @@ import buildingsRouter from './server/routes/buildings.js';
 import extensionsRouter from './server/routes/extensions.js';
 import searchRouter from './server/routes/search.js';
 import databasesRouter from './server/routes/databases.js';
+import translationRouter from './server/routes/translation.js';
 
 async function startServer() {
   const app = express();
@@ -37,6 +38,7 @@ async function startServer() {
   app.use('/api/extensions', extensionsRouter);
   app.use('/api/search', searchRouter);
   app.use('/api/databases', databasesRouter);
+  app.use('/api/translate', translationRouter);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {

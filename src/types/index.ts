@@ -200,6 +200,25 @@ export interface TechnicalExtension {
   status: 'active' | 'disabled' | 'error';
 }
 
+// Database Engine Configuration
+export interface DatabaseEngineConfig {
+  engine: 'cloud_sql' | 'local_sqlite' | 'local_file';
+  active_instance: string;
+  local?: {
+    file_path: string;
+    auto_sync: boolean;
+    backup_on_save: boolean;
+    format?: 'sqlite' | 'json';
+  };
+  cloud_sql?: {
+    provider: string;
+    region: string;
+    instance_id: string;
+    db_name: string;
+    status?: 'connected' | 'idle' | 'disconnected';
+  };
+}
+
 export interface InstanceConfig {
   instance: {
     name: string;
@@ -207,6 +226,7 @@ export interface InstanceConfig {
     host_env?: string;
     version?: string;
   };
+  database?: DatabaseEngineConfig;
   modules: Record<string, boolean>;
   extensions: Record<string, boolean>;
   settings?: {

@@ -1,17 +1,50 @@
 {
+  "id": "/",
   "name": "LifeHub — Modular Information Platform",
   "short_name": "LifeHub",
   "description": "Self-hosted, modular, extensible personal and domain information platform.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0f172a",
-  "theme_color": "#2563eb",
+  "theme_color": "#0f172a",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "/icon.svg",
-      "sizes": "any",
+      "sizes": "192x192 512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Persone e Contatti",
+      "short_name": "Persone",
+      "description": "Accedi alla rubrica e ai contatti",
+      "url": "/?module=people",
+      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Luoghi e Mappe",
+      "short_name": "Luoghi",
+      "description": "Accedi ai luoghi e alle coordinate",
+      "url": "/?module=places",
+      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Eventi e Calendario",
+      "short_name": "Eventi",
+      "description": "Accedi agli eventi e alla cronologia",
+      "url": "/?module=events",
+      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
     }
   ]
 }

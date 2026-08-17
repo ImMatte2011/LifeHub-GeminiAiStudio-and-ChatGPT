@@ -65,6 +65,9 @@ export interface TranslationDictionary {
   // Sidebar
   sidebar: {
     domainModules: string;
+    crossViews: string;
+    systemSettings: string;
+    backupExport: string;
     quickOverview: string;
     multiDbViewer: string;
     relationshipNetwork: string;
@@ -123,6 +126,61 @@ export interface TranslationDictionary {
     saving: string;
     configSavedSuccess: string;
   };
+  // Unified Settings Hub
+  settingsModal: {
+    title: string;
+    subtitle: string;
+    tabGeneral: string;
+    tabDatabase: string;
+    tabBackup: string;
+    tabLanguage: string;
+    tabTheme: string;
+    tabExtensions: string;
+    tabAudit: string;
+    tabSystem: string;
+    dbEngineTitle: string;
+    dbEngineDesc: string;
+    cloudSqlOption: string;
+    cloudSqlDesc: string;
+    cloudSqlActiveBadge: string;
+    localDbOption: string;
+    localDbDesc: string;
+    localDbActiveBadge: string;
+    localFilePath: string;
+    localFilePathHelp: string;
+    autoSyncLocal: string;
+    autoSyncDesc: string;
+    switchEngineSuccess: string;
+    activeDbInstance: string;
+    cloudRegion: string;
+    connectionStatus: string;
+    connected: string;
+    ready: string;
+    exportLocalDb: string;
+    importLocalDb: string;
+  };
+  // Backup & Export Panel
+  backupPanel: {
+    title: string;
+    subtitle: string;
+    fullBackupTitle: string;
+    fullBackupDesc: string;
+    downloadFullJson: string;
+    exportFormatModular: string;
+    exportPeopleVcf: string;
+    exportPlacesGeoJson: string;
+    exportEventsIcs: string;
+    exportKnowledgeJson: string;
+    importRestoreTitle: string;
+    importRestoreDesc: string;
+    selectFileToRestore: string;
+    restoreSuccess: string;
+    restoreError: string;
+    dragDropFile: string;
+    snapshotHistory: string;
+    createManualSnapshot: string;
+    snapshotCreated: string;
+  };
   // Database & Schemas Explorer
   schemasExplorer: {
     title: string;
@@ -174,6 +232,64 @@ export interface TranslationDictionary {
     customRadius: string;
     preview: string;
     applyTheme: string;
+  };
+  // Dashboard Quick Launcher Hub
+  dashboardHub: {
+    welcome: string;
+    quickAccessSubtitle: string;
+    searchPrompt: string;
+    totalEntities: string;
+    categoryDomains: string;
+    categoryCrossViews: string;
+    categorySystem: string;
+    peopleTitle: string;
+    peopleDesc: string;
+    placesTitle: string;
+    placesDesc: string;
+    eventsTitle: string;
+    eventsDesc: string;
+    knowledgeTitle: string;
+    knowledgeDesc: string;
+    buildingsTitle: string;
+    buildingsDesc: string;
+    graphTitle: string;
+    graphDesc: string;
+    timelineTitle: string;
+    timelineDesc: string;
+    schemasTitle: string;
+    schemasDesc: string;
+    configTitle: string;
+    configDesc: string;
+    extensionsTitle: string;
+    extensionsDesc: string;
+    systemOpsTitle: string;
+    systemOpsDesc: string;
+    auditTitle: string;
+    auditDesc: string;
+  };
+  peopleView?: {
+    title: string;
+    subtitle: string;
+    addPerson: string;
+    searchPlaceholder: string;
+  };
+  placesView?: {
+    title: string;
+    subtitle: string;
+    addPlace: string;
+    searchPlaceholder: string;
+  };
+  eventsView?: {
+    title: string;
+    subtitle: string;
+    addEvent: string;
+    searchPlaceholder: string;
+  };
+  buildingsView?: {
+    title: string;
+    subtitle: string;
+    addBuilding: string;
+    searchPlaceholder: string;
   };
 }
 
@@ -240,6 +356,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     },
     sidebar: {
       domainModules: 'Domain Modules',
+      crossViews: 'Cross-Domain Views',
+      systemSettings: 'System & Control Center',
+      backupExport: 'Backup & Export',
       quickOverview: 'Instance Telemetry & Hub',
       multiDbViewer: 'Multi-Database & Interactive Schema Viewer',
       relationshipNetwork: 'Universal Relationship Network',
@@ -297,6 +416,59 @@ export const translations: Record<Language, TranslationDictionary> = {
       saving: 'Saving...',
       configSavedSuccess: 'Instance configuration applied and saved successfully!',
     },
+    settingsModal: {
+      title: 'LifeHub Control Center & Settings',
+      subtitle: 'Manage system architecture, database storage engines (Cloud SQL vs Local File), language, theme, extensions, and audit logs.',
+      tabGeneral: 'General & YAML',
+      tabDatabase: 'Database & Storage',
+      tabBackup: 'Backup & Export',
+      tabLanguage: 'Language & i18n',
+      tabTheme: 'Theme & Palette',
+      tabExtensions: 'Extensions',
+      tabAudit: 'Audit Log',
+      tabSystem: 'Hardware & Telemetry',
+      dbEngineTitle: 'Active Storage & Database Engine',
+      dbEngineDesc: 'Select whether LifeHub stores information in Google Cloud SQL (PostgreSQL) or a local standalone database file on your PC or Raspberry Pi.',
+      cloudSqlOption: 'Google Cloud SQL (PostgreSQL)',
+      cloudSqlDesc: 'Fully managed relational database cluster with Drizzle ORM, multi-schema isolation, and high availability.',
+      cloudSqlActiveBadge: 'Cloud SQL Active',
+      localDbOption: 'Local Database File (PC / Raspberry Pi / SQLite)',
+      localDbDesc: 'Standalone file-based storage (.sqlite / .db). Perfect for local Raspberry Pi nodes, air-gapped homelabs, and zero-cloud deployments.',
+      localDbActiveBadge: 'Local Storage Active',
+      localFilePath: 'Local Database File Path',
+      localFilePathHelp: 'Path on the host machine or Raspberry Pi filesystem (e.g., /var/lib/lifehub/data.sqlite or ./data/lifehub.sqlite)',
+      autoSyncLocal: 'Automatic Disk Write Sync',
+      autoSyncDesc: 'Immediately flush changes to local disk storage on write.',
+      switchEngineSuccess: 'Storage engine switched successfully!',
+      activeDbInstance: 'Active Database Catalog',
+      cloudRegion: 'Cloud Region: europe-west2 (London)',
+      connectionStatus: 'Engine Connection Status',
+      connected: 'Connected',
+      ready: 'Ready',
+      exportLocalDb: 'Export Local DB Snapshot',
+      importLocalDb: 'Import Database File',
+    },
+    backupPanel: {
+      title: 'Database Backup & Data Portability',
+      subtitle: 'Create full database snapshots, export individual domain modules into standard formats (JSON, vCard, iCal, GeoJSON), or restore from backup files.',
+      fullBackupTitle: 'Full System Snapshot',
+      fullBackupDesc: 'Export all tables, schema structures, entities, and WAL logs into a single JSON or SQLite archive.',
+      downloadFullJson: 'Download Full JSON Backup',
+      exportFormatModular: 'Modular Data Export',
+      exportPeopleVcf: 'Contacts (vCard .vcf)',
+      exportPlacesGeoJson: 'Places (GeoJSON)',
+      exportEventsIcs: 'Calendar (iCalendar .ics)',
+      exportKnowledgeJson: 'Knowledge Base (JSON)',
+      importRestoreTitle: 'Import & Restore Data',
+      importRestoreDesc: 'Upload a previously exported LifeHub backup file (.json) to restore entities and configuration.',
+      selectFileToRestore: 'Select Backup File',
+      restoreSuccess: 'Data restored successfully into database!',
+      restoreError: 'Failed to parse and restore backup file',
+      dragDropFile: 'Drag and drop JSON backup file here, or click to browse',
+      snapshotHistory: 'Snapshot History & Recovery Points',
+      createManualSnapshot: 'Create Snapshot Point',
+      snapshotCreated: 'Snapshot created and stored locally',
+    },
     schemasExplorer: {
       title: 'Multi-Database & Schema Explorer',
       subtitle: 'Interactive inspection of PostgreSQL schemas, tables, constraints, live records, foreign keys, and 50/50 dual split-screen comparison.',
@@ -345,6 +517,63 @@ export const translations: Record<Language, TranslationDictionary> = {
       customRadius: 'Border Radius',
       preview: 'Live Preview',
       applyTheme: 'Save Theme',
+    },
+    peopleView: {
+      title: 'People & Address Book',
+      subtitle: 'Registry of contacts, organizations, and linked entities.',
+      addPerson: 'Add Person',
+      searchPlaceholder: 'Search people by name, company, email or notes...',
+    },
+    placesView: {
+      title: 'Places & Geo Registry',
+      subtitle: 'Geographical nodes, spatial metadata, and interactive map.',
+      addPlace: 'Add Place',
+      searchPlaceholder: 'Search places by name, category, address or coords...',
+    },
+    eventsView: {
+      title: 'Events & Temporal Calendar',
+      subtitle: 'Temporal timeline, participants, places, and scheduling.',
+      addEvent: 'New Event',
+      searchPlaceholder: 'Search by title, description or participants...',
+    },
+    buildingsView: {
+      title: 'Buildings & Real Estate Assets',
+      subtitle: 'Real estate assets, facilities, floors, and assigned managers.',
+      addBuilding: 'Add Building',
+      searchPlaceholder: 'Search building by name, code, or type...',
+    },
+    dashboardHub: {
+      welcome: 'LifeHub Quick Launcher',
+      quickAccessSubtitle: 'Fast direct navigation to all modules, cross-entity views, and system tools.',
+      searchPrompt: 'Search entities, tags, places...',
+      totalEntities: 'Total Indexed Entities',
+      categoryDomains: 'Personal & Content Modules',
+      categoryCrossViews: 'Cross-Domain & Relational Views',
+      categorySystem: 'Administration & System Tools',
+      peopleTitle: 'People & Contacts',
+      peopleDesc: 'Address book, relationships, companies, and roles',
+      placesTitle: 'Places & Maps',
+      placesDesc: 'Geographic nodes, coordinates, maps, and POIs',
+      eventsTitle: 'Events & Calendar',
+      eventsDesc: 'Meetings, deadlines, participants, and schedule',
+      knowledgeTitle: 'Knowledge & Catalogs',
+      knowledgeDesc: 'Books, hardware, software, recipes, and dynamic schemas',
+      buildingsTitle: 'Facilities & Buildings',
+      buildingsDesc: 'Real estate assets, floors, facilities, and managers',
+      graphTitle: 'Entity Relationship Graph',
+      graphDesc: 'Interactive visual network of connected entities',
+      timelineTitle: 'Unified Chronology',
+      timelineDesc: 'Chronological timeline of all historical and scheduled events',
+      schemasTitle: 'Database & Schema Explorer',
+      schemasDesc: 'Explore physical database tables, columns, indexes, and live records',
+      configTitle: 'Instance Configuration',
+      configDesc: 'Manage instance.yaml, roles, permissions, and identity',
+      extensionsTitle: 'Technical Extensions',
+      extensionsDesc: 'Manage PostGIS, pg_trgm, Timescale, and pgvector plugins',
+      systemOpsTitle: 'Telemetry & Host Hardware',
+      systemOpsDesc: 'Raspberry Pi 4 CPU temp, memory usage, and SSD storage',
+      auditTitle: 'Audit Log & Security',
+      auditDesc: 'Complete traceable audit trail, logins, and WAL security logs',
     },
   },
   it: {
@@ -408,7 +637,10 @@ export const translations: Record<Language, TranslationDictionary> = {
       profileTooltip: 'Gestione Utenti e Ruoli',
     },
     sidebar: {
-      domainModules: 'Moduli di Dominio',
+      domainModules: 'Moduli Personali',
+      crossViews: 'Viste Trasversali',
+      systemSettings: 'Impostazioni & Sistema',
+      backupExport: 'Backup ed Esportazione',
       quickOverview: 'Telemetria Istanza e Hub',
       multiDbViewer: 'Multi-Database e Visualizzatore Schemi',
       relationshipNetwork: 'Rete Universale delle Relazioni',
@@ -466,6 +698,59 @@ export const translations: Record<Language, TranslationDictionary> = {
       saving: 'Salvataggio in corso...',
       configSavedSuccess: 'Configurazione dell\'istanza applicata e salvata con successo!',
     },
+    settingsModal: {
+      title: 'Pannello di Controllo e Impostazioni',
+      subtitle: 'Gestisci l\'architettura dell\'istanza, la scelta del database (Cloud SQL vs File Locale/SQLite), lingua, tema grafico, estensioni e log di sistema.',
+      tabGeneral: 'Generale & YAML',
+      tabDatabase: 'Database & Storage',
+      tabBackup: 'Backup & Esportazione',
+      tabLanguage: 'Lingua & Traduzione',
+      tabTheme: 'Tema e Palette',
+      tabExtensions: 'Estensioni',
+      tabAudit: 'Registro Audit',
+      tabSystem: 'Hardware & Telemetria',
+      dbEngineTitle: 'Motore di Storage e Database Attivo',
+      dbEngineDesc: 'Scegli se LifeHub deve salvare le informazioni su Google Cloud SQL (PostgreSQL gestito) o direttamente su file locale (.sqlite / .db) sul tuo PC o Raspberry Pi.',
+      cloudSqlOption: 'Google Cloud SQL (PostgreSQL)',
+      cloudSqlDesc: 'Cluster di database relazionale ad alta disponibilità con Drizzle ORM, isolamento multi-schema ed estensioni PostGIS/pg_trgm.',
+      cloudSqlActiveBadge: 'Cloud SQL Attivo',
+      localDbOption: 'Database Locale (File PC / Raspberry Pi / SQLite)',
+      localDbDesc: 'Archiviazione standalone su file locale (.sqlite). Ideale per Raspberry Pi standalone, homelab offline e configurazioni senza cloud.',
+      localDbActiveBadge: 'Storage Locale Attivo',
+      localFilePath: 'Percorso File Database Locale',
+      localFilePathHelp: 'Percorso sul file system dell\'host o Raspberry Pi (es. /var/lib/lifehub/data.sqlite oppure ./data/lifehub.sqlite)',
+      autoSyncLocal: 'Sincronizzazione Automatica su Disco',
+      autoSyncDesc: 'Scrive immediatamente ogni modifica sul file di database locale.',
+      switchEngineSuccess: 'Motore di storage modificato con successo!',
+      activeDbInstance: 'Catalogo Database Attivo',
+      cloudRegion: 'Regione Cloud: europe-west2 (Londra)',
+      connectionStatus: 'Stato Connessione Motore',
+      connected: 'Connesso',
+      ready: 'Pronto',
+      exportLocalDb: 'Esporta Snapshot DB Locale',
+      importLocalDb: 'Importa File Database',
+    },
+    backupPanel: {
+      title: 'Backup Database e Portabilità Dati',
+      subtitle: 'Crea snapshot completi del database, esporta singoli moduli in formati aperti standard (JSON, vCard, iCal, GeoJSON) o ripristina da file di backup.',
+      fullBackupTitle: 'Snapshot Completo del Sistema',
+      fullBackupDesc: 'Esporta tutte le tabelle, strutture di schema, entità e registri WAL in un unico file JSON o SQLite.',
+      downloadFullJson: 'Scarica Backup Completo JSON',
+      exportFormatModular: 'Esportazione Modulare Dati',
+      exportPeopleVcf: 'Contatti (vCard .vcf)',
+      exportPlacesGeoJson: 'Luoghi (GeoJSON)',
+      exportEventsIcs: 'Calendario (iCalendar .ics)',
+      exportKnowledgeJson: 'Base di Conoscenza (JSON)',
+      importRestoreTitle: 'Importazione e Ripristino Dati',
+      importRestoreDesc: 'Carica un file di backup LifeHub precedentemente esportato (.json) per ripristinare le entità e la configurazione.',
+      selectFileToRestore: 'Seleziona File di Backup',
+      restoreSuccess: 'Dati ripristinati con successo nel database!',
+      restoreError: 'Impossibile leggere o ripristinare il file di backup',
+      dragDropFile: 'Trascina qui il file di backup JSON o fai clic per selezionarlo',
+      snapshotHistory: 'Cronologia Snapshot e Punti di Ripristino',
+      createManualSnapshot: 'Crea Punto di Snapshot',
+      snapshotCreated: 'Snapshot creato e archiviato localmente',
+    },
     schemasExplorer: {
       title: 'Multi-Database & Schema Explorer',
       subtitle: 'Ispezione interattiva degli schemi PostgreSQL, tabelle, vincoli, record reali, chiavi esterne e visualizzazione divisa a metà 50/50.',
@@ -514,6 +799,63 @@ export const translations: Record<Language, TranslationDictionary> = {
       customRadius: 'Raggio dei Bordi',
       preview: 'Anteprima in Tempo Reale',
       applyTheme: 'Salva Tema',
+    },
+    peopleView: {
+      title: 'Persone e Rubrica Contatti',
+      subtitle: 'Registro contatti, organizzazioni e relazioni tra entità.',
+      addPerson: 'Aggiungi Persona',
+      searchPlaceholder: 'Cerca per nome, cognome, azienda, email o note...',
+    },
+    placesView: {
+      title: 'Luoghi e Registro Spaziale',
+      subtitle: 'Nodi geografici, metadati di posizione e mappa interattiva.',
+      addPlace: 'Aggiungi Luogo',
+      searchPlaceholder: 'Cerca luoghi per nome, categoria, indirizzo o coordinate...',
+    },
+    eventsView: {
+      title: 'Eventi e Calendario Temporale',
+      subtitle: 'Cronologia, partecipanti, luoghi e pianificazione temporale.',
+      addEvent: 'Nuovo Evento',
+      searchPlaceholder: 'Cerca per titolo, descrizione o partecipanti...',
+    },
+    buildingsView: {
+      title: 'Edifici e Asset Immobiliari',
+      subtitle: 'Asset immobiliari, strutture, piani e responsabili assegnati.',
+      addBuilding: 'Aggiungi Edificio',
+      searchPlaceholder: 'Cerca edificio per nome, codice o tipologia...',
+    },
+    dashboardHub: {
+      welcome: 'LifeHub Quick Launcher',
+      quickAccessSubtitle: 'Accesso rapido e diretto a tutti i moduli, viste relazionali e strumenti di sistema.',
+      searchPrompt: 'Cerca entità, tag, luoghi...',
+      totalEntities: 'Entità Totali Indicizzate',
+      categoryDomains: 'Moduli Personali e Contenuti',
+      categoryCrossViews: 'Viste Trasversali e Rete Dati',
+      categorySystem: 'Amministrazione e Strumenti di Sistema',
+      peopleTitle: 'Persone e Contatti',
+      peopleDesc: 'Rubrica, relazioni, aziende e ruoli professionali',
+      placesTitle: 'Luoghi e Mappe',
+      placesDesc: 'Nodi geografici, coordinate PostGIS, mappe e POI',
+      eventsTitle: 'Eventi e Calendario',
+      eventsDesc: 'Appuntamenti, riunioni, partecipanti e scadenze',
+      knowledgeTitle: 'Conoscenza e Schemi',
+      knowledgeDesc: 'Libri, hardware, software, ricette e tipi dinamici',
+      buildingsTitle: 'Edifici e Strutture',
+      buildingsDesc: 'Asset immobiliari, locali, piani e gestori',
+      graphTitle: 'Grafo delle Relazioni',
+      graphDesc: 'Rete visiva interattiva dei collegamenti tra entità',
+      timelineTitle: 'Cronologia Unificata',
+      timelineDesc: 'Flusso temporale unificato di tutti gli eventi storici e futuri',
+      schemasTitle: 'Database e Schema Explorer',
+      schemasDesc: 'Esplora tabelle fisiche, colonne, indici e record live',
+      configTitle: 'Configurazione Istanza',
+      configDesc: 'Gestione instance.yaml, ruoli, permessi e identità',
+      extensionsTitle: 'Estensioni Tecniche',
+      extensionsDesc: 'Gestione plugin PostGIS, pg_trgm, Timescale e pgvector',
+      systemOpsTitle: 'Telemetria e Hardware Host',
+      systemOpsDesc: 'Temperatura CPU Raspberry Pi 4, RAM e disco SSD',
+      auditTitle: 'Registro Audit e Sicurezza',
+      auditDesc: 'Tracciabilità transazioni, accessi di sicurezza e log WAL',
     },
   },
 };

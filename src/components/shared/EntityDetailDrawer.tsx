@@ -14,10 +14,13 @@ import {
   Clock,
   CheckCircle2,
   Layers,
+  AlertTriangle,
 } from 'lucide-react';
 import { Tag, LinkType } from '../../types/index.js';
 import { api } from '../../services/api.js';
 import { TagPicker } from './TagPicker.js';
+import { ConfirmDialog } from './ConfirmDialog.js';
+import { useLanguage, TranslatedText } from '../../i18n/LanguageContext.js';
 
 interface EntityDetailDrawerProps {
   entityId: string | null;
@@ -30,6 +33,7 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
   onClose,
   onEntityClick,
 }) => {
+  const { language, t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [entityData, setEntityData] = useState<any>(null);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -44,11 +48,13 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
   const [selectedLinkTypeId, setSelectedLinkTypeId] = useState('');
   const [linkNotes, setLinkNotes] = useState('');
 
+  // Delete Entity Confirmation
+  const [isDeletingEntity, setIsDeletingEntity] = useState(false);
+
   const loadEntity = async () => {
     if (!entityId) return;
     setLoading(true);
     try {
-      // Determine entity type by prefix or search
       const [fetchedTags, fetchedAllTags, fetchedLinks, fetchedLinkTypes, searchRes] = await Promise.all([
         api.shared.getEntityTags(entityId),
         api.shared.getTags(),
@@ -105,13 +111,11 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
   const handleTagsChange = async (newTagIds: string[]) => {
     try {
       const currentIds = tags.map((t) => t.id);
-      // Added
       for (const id of newTagIds) {
         if (!currentIds.includes(id)) {
           await api.shared.addEntityTag(entityId, id);
         }
       }
-      // Removed
       for (const id of currentIds) {
         if (!newTagIds.includes(id)) {
           await api.shared.removeEntityTag(entityId, id);
@@ -147,6 +151,28 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
     }
   };
 
+  const handleConfirmDeleteEntity = async () => {
+    if (!entityId) return;
+    try {
+      if (entityId.startsWith('person_')) {
+        await api.people.delete(entityId);
+      } else if (entityId.startsWith('place_')) {
+        await api.places.delete(entityId);
+      } else if (entityId.startsWith('event_')) {
+        await api.events.delete(entityId);
+      } else if (entityId.startsWith('know_')) {
+        await api.knowledge.delete(entityId);
+      } else if (entityId.startsWith('bld_')) {
+        await api.buildings.delete(entityId);
+      }
+      setIsDeletingEntity(false);
+      onClose();
+    } catch (err) {
+      console.error('Failed to delete entity from drawer:', err);
+      setIsDeletingEntity(false);
+    }
+  };
+
   const getEntityIcon = (type: string) => {
     switch (type) {
       case 'person':
@@ -164,6 +190,29 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
     }
   };
 
+  const getEntityTypeName = (type: string) => {
+    if (language === 'it') {
+      switch (type) {
+        case 'person':
+          return 'Persona';
+        case 'place':
+          return 'Luogo';
+        case 'event':
+          return 'Evento';
+        case 'knowledge_item':
+          return 'Knowledge';
+        case 'building':
+          return 'Edificio';
+        default:
+          return type;
+      }
+    }
+    return type.replace('_', ' ');
+  };
+
+  const entityTitle = entityData?.title ||
+    (entityData?.first_name ? `${entityData.first_name} ${entityData.last_name || ''}` : entityData?.name || 'Entity');
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/50 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
       <div className="w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl flex flex-col h-full overflow-hidden">
@@ -176,21 +225,32 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
-                  {entityData?.entity_type || 'Entity'}
+                  {entityData?.entity_type ? getEntityTypeName(entityData.entity_type) : 'Entity'}
                 </span>
                 <span className="text-xs font-mono text-slate-400">{entityId}</span>
               </div>
               <h2 className="text-lg font-bold text-slate-900 mt-1">
-                {entityData?.title || entityData?.first_name ? `${entityData.first_name} ${entityData.last_name || ''}` : entityData?.name || 'Entity Details'}
+                {entityTitle}
               </h2>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setIsDeletingEntity(true)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+              title={language === 'it' ? 'Elimina entità' : 'Delete entity'}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Drawer Content */}
@@ -198,24 +258,26 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
           {loading ? (
             <div className="py-12 flex flex-col items-center justify-center text-slate-400">
               <Clock className="w-6 h-6 animate-spin mb-2 text-blue-600" />
-              <p className="text-sm">Loading entity metadata from Core registry...</p>
+              <p className="text-sm">
+                {language === 'it' ? 'Caricamento metadati entità dal registro Core...' : 'Loading entity metadata from Core registry...'}
+              </p>
             </div>
           ) : entityData ? (
             <>
               {/* Core Entity Info */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs text-slate-600">
                 <div className="flex justify-between">
-                  <span className="font-mono text-slate-400">Universal Pattern:</span>
+                  <span className="font-mono text-slate-400">{language === 'it' ? 'Pattern Modulare:' : 'Modular Pattern:'}</span>
                   <span className="font-medium text-slate-800">core.entities → shared services</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-mono text-slate-400">Registered ID:</span>
+                  <span className="font-mono text-slate-400">{language === 'it' ? 'ID Registro:' : 'Registered ID:'}</span>
                   <span className="font-mono text-blue-600 font-semibold">{entityId}</span>
                 </div>
                 {entityData.entity?.created_at && (
                   <div className="flex justify-between">
-                    <span className="font-mono text-slate-400">Created At:</span>
-                    <span className="text-slate-700">{new Date(entityData.entity.created_at).toLocaleString()}</span>
+                    <span className="font-mono text-slate-400">{language === 'it' ? 'Data Registrazione:' : 'Created At:'}</span>
+                    <span className="text-slate-700">{new Date(entityData.entity.created_at).toLocaleString(language === 'it' ? 'it-IT' : 'en-US')}</span>
                   </div>
                 )}
               </div>
@@ -225,7 +287,7 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                     <TagIcon className="w-3.5 h-3.5 text-blue-600" />
-                    Shared Tags (shared.entity_tags)
+                    {language === 'it' ? 'Tag Condivisi (shared.entity_tags)' : 'Shared Tags (shared.entity_tags)'}
                   </h3>
                 </div>
                 <TagPicker
@@ -238,26 +300,30 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
               {/* Domain Specific Data Card */}
               <div className="p-4 bg-slate-50/50 border border-slate-200 rounded-xl space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Domain Attributes
+                  {language === 'it' ? 'Attributi di Dominio' : 'Domain Attributes'}
                 </h3>
 
                 {/* Person details */}
                 {entityData.entity_type === 'person' && (
                   <div className="space-y-2 text-sm">
-                    {entityData.bio && <p className="text-slate-700 text-xs">{entityData.bio}</p>}
+                    {entityData.bio && (
+                      <p className="text-slate-700 text-xs leading-relaxed">
+                        <TranslatedText text={entityData.bio} />
+                      </p>
+                    )}
                     {entityData.company && (
                       <div className="text-xs text-slate-600">
-                        <span className="text-slate-400">Company / Role:</span> {entityData.role_title} @ {entityData.company}
+                        <span className="text-slate-400">{language === 'it' ? 'Azienda / Ruolo:' : 'Company / Role:'}</span> {entityData.role_title} @ {entityData.company}
                       </div>
                     )}
                     {entityData.birthdate && (
                       <div className="text-xs text-slate-600">
-                        <span className="text-slate-400">Birthdate:</span> {entityData.birthdate}
+                        <span className="text-slate-400">{language === 'it' ? 'Data di Nascita:' : 'Birthdate:'}</span> {entityData.birthdate}
                       </div>
                     )}
                     {entityData.contacts && entityData.contacts.length > 0 && (
                       <div className="pt-2 border-t border-slate-200">
-                        <span className="text-xs font-medium text-slate-700">Contacts:</span>
+                        <span className="text-xs font-medium text-slate-700">{language === 'it' ? 'Recapiti:' : 'Contacts:'}</span>
                         <div className="mt-1 space-y-1">
                           {entityData.contacts.map((c: any) => (
                             <div key={c.id} className="text-xs flex items-center gap-2 text-slate-800 font-mono">
@@ -277,12 +343,12 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                 {entityData.entity_type === 'place' && (
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Category:</span>
+                      <span className="text-slate-400">{language === 'it' ? 'Categoria:' : 'Category:'}</span>
                       <span className="font-medium text-slate-800">{entityData.category}</span>
                     </div>
                     {entityData.address && (
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Address:</span>
+                        <span className="text-slate-400">{language === 'it' ? 'Indirizzo:' : 'Address:'}</span>
                         <span className="text-slate-700 text-right">{entityData.address}</span>
                       </div>
                     )}
@@ -291,7 +357,9 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                       <span className="text-blue-600">{entityData.latitude}, {entityData.longitude}</span>
                     </div>
                     {entityData.description && (
-                      <p className="text-slate-600 pt-1">{entityData.description}</p>
+                      <p className="text-slate-600 pt-1 leading-relaxed">
+                        <TranslatedText text={entityData.description} />
+                      </p>
                     )}
                   </div>
                 )}
@@ -300,14 +368,18 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                 {entityData.entity_type === 'knowledge_item' && (
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Meta Type:</span>
+                      <span className="text-slate-400">{language === 'it' ? 'Tipo Meta:' : 'Meta Type:'}</span>
                       <span className="font-semibold text-emerald-700">{entityData.meta_type?.name || entityData.entity_type_id}</span>
                     </div>
                     {entityData.description && (
-                      <p className="text-slate-600 italic">{entityData.description}</p>
+                      <p className="text-slate-600 leading-relaxed">
+                        <TranslatedText text={entityData.description} />
+                      </p>
                     )}
                     <div className="pt-2 border-t border-slate-200">
-                      <span className="text-[11px] font-mono text-slate-500 uppercase font-semibold">JSONB Properties:</span>
+                      <span className="text-[11px] font-mono text-slate-500 uppercase font-semibold">
+                        {language === 'it' ? 'Proprietà JSONB Validate:' : 'Validated JSONB Properties:'}
+                      </span>
                       <div className="mt-1.5 p-2.5 rounded-lg bg-white border border-slate-200 space-y-1">
                         {entityData.properties && Object.keys(entityData.properties).length > 0 ? (
                           Object.entries(entityData.properties).map(([k, v]) => (
@@ -317,7 +389,9 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                             </div>
                           ))
                         ) : (
-                          <span className="text-slate-400 italic">Empty JSONB properties</span>
+                          <span className="text-slate-400 italic">
+                            {language === 'it' ? 'Nessuna proprietà JSONB' : 'Empty JSONB properties'}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -328,14 +402,41 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                 {entityData.entity_type === 'event' && (
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Time:</span>
+                      <span className="text-slate-400">{language === 'it' ? 'Orario:' : 'Time:'}</span>
                       <span className="text-slate-800 font-mono">{entityData.start_time}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Status:</span>
+                      <span className="text-slate-400">{language === 'it' ? 'Stato:' : 'Status:'}</span>
                       <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-medium">{entityData.status}</span>
                     </div>
-                    {entityData.description && <p className="text-slate-600 pt-1">{entityData.description}</p>}
+                    {entityData.description && (
+                      <p className="text-slate-600 pt-1 leading-relaxed">
+                        <TranslatedText text={entityData.description} />
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Building details */}
+                {entityData.entity_type === 'building' && (
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">{language === 'it' ? 'Codice:' : 'Code:'}</span>
+                      <span className="font-mono font-semibold text-slate-800">{entityData.code}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">{language === 'it' ? 'Tipologia:' : 'Type:'}</span>
+                      <span className="font-medium text-slate-800">{entityData.building_type}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">{language === 'it' ? 'Piani / Area:' : 'Floors / Area:'}</span>
+                      <span className="text-slate-700">{entityData.floors_count} {language === 'it' ? 'piani' : 'floors'} • {entityData.total_area_sqm} m²</span>
+                    </div>
+                    {entityData.notes && (
+                      <p className="text-slate-600 pt-1 leading-relaxed">
+                        <TranslatedText text={entityData.notes} />
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -345,22 +446,22 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                     <Link2 className="w-3.5 h-3.5 text-blue-600" />
-                    Cross-Entity Links (shared.links)
+                    {language === 'it' ? 'Relazioni Grafiche (shared.links)' : 'Cross-Entity Links (shared.links)'}
                   </h3>
                   <button
                     type="button"
                     onClick={() => setIsLinking(!isLinking)}
                     className="text-xs px-2.5 py-1 rounded-lg bg-white hover:bg-slate-50 text-blue-600 border border-slate-200 flex items-center gap-1 transition-colors shadow-2xs font-medium"
                   >
-                    <Plus className="w-3 h-3" /> Connect Entity
+                    <Plus className="w-3 h-3" /> {language === 'it' ? 'Collega Entità' : 'Connect Entity'}
                   </button>
                 </div>
 
                 {isLinking && (
                   <form onSubmit={handleCreateLink} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
-                    <div className="font-semibold text-slate-900">Connect to another entity</div>
+                    <div className="font-semibold text-slate-900">{language === 'it' ? 'Crea collegamento tra entità' : 'Connect to another entity'}</div>
                     <div>
-                      <label className="text-slate-600 block mb-1 font-medium">Relationship Type</label>
+                      <label className="text-slate-600 block mb-1 font-medium">{language === 'it' ? 'Tipo Relazione' : 'Relationship Type'}</label>
                       <select
                         value={selectedLinkTypeId}
                         onChange={(e) => setSelectedLinkTypeId(e.target.value)}
@@ -375,16 +476,16 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                     </div>
 
                     <div>
-                      <label className="text-slate-600 block mb-1 font-medium">Target Entity</label>
+                      <label className="text-slate-600 block mb-1 font-medium">{language === 'it' ? 'Entità Target' : 'Target Entity'}</label>
                       <select
                         value={targetEntityId}
                         onChange={(e) => setTargetEntityId(e.target.value)}
                         className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 outline-none"
                       >
-                        <option value="">Select an entity...</option>
+                        <option value="">{language === 'it' ? '-- Seleziona un\'entità --' : '-- Select an entity --'}</option>
                         {allEntities.map((e) => (
                           <option key={e.id} value={e.id}>
-                            [{e.entity_type}] {e.title}
+                            [{getEntityTypeName(e.entity_type)}] {e.title}
                           </option>
                         ))}
                       </select>
@@ -393,7 +494,7 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                     <div>
                       <input
                         type="text"
-                        placeholder="Optional relation notes..."
+                        placeholder={language === 'it' ? 'Note opzionali sulla relazione...' : 'Optional relation notes...'}
                         value={linkNotes}
                         onChange={(e) => setLinkNotes(e.target.value)}
                         className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 outline-none"
@@ -406,14 +507,14 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                         onClick={() => setIsLinking(false)}
                         className="px-2.5 py-1 text-slate-500 hover:text-slate-800"
                       >
-                        Cancel
+                        {language === 'it' ? 'Annulla' : 'Cancel'}
                       </button>
                       <button
                         type="submit"
                         disabled={!targetEntityId || !selectedLinkTypeId}
                         className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-2xs disabled:opacity-50"
                       >
-                        Save Connection
+                        {language === 'it' ? 'Salva Connessione' : 'Save Connection'}
                       </button>
                     </div>
                   </form>
@@ -421,7 +522,7 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
 
                 {links.length === 0 ? (
                   <div className="p-4 text-center rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-400">
-                    No cross-entity links recorded yet.
+                    {language === 'it' ? 'Nessun collegamento registrato per questa entità.' : 'No cross-entity links recorded yet.'}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -447,9 +548,10 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                           {l.notes && <p className="text-slate-500 text-[11px]">{l.notes}</p>}
                         </div>
                         <button
+                          type="button"
                           onClick={() => handleDeleteLink(l.id)}
                           className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
-                          title="Remove connection"
+                          title={language === 'it' ? 'Rimuovi connessione' : 'Remove connection'}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -458,12 +560,42 @@ export const EntityDetailDrawer: React.FC<EntityDetailDrawerProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Danger Zone: Delete Entity Action */}
+              <div className="pt-4 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsDeletingEntity(true)}
+                  className="w-full py-2.5 px-4 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {language === 'it' ? 'Elimina questa entità' : 'Delete this entity'}
+                </button>
+              </div>
             </>
           ) : (
-            <div className="text-center py-12 text-slate-400 text-sm">Entity not found.</div>
+            <div className="text-center py-12 text-slate-400 text-sm">
+              {language === 'it' ? 'Entità non trovata.' : 'Entity not found.'}
+            </div>
           )}
         </div>
       </div>
+
+      {/* Confirmation Modal for Entity Deletion */}
+      <ConfirmDialog
+        isOpen={isDeletingEntity}
+        title={language === 'it' ? 'Elimina Entità' : 'Delete Entity'}
+        itemName={entityTitle}
+        message={
+          language === 'it'
+            ? 'Sei sicuro di voler eliminare questa entità? Verranno rimossi anche i tag e i collegamenti correlati.'
+            : 'Are you sure you want to delete this entity? Associated tags and links will also be removed.'
+        }
+        confirmLabel={language === 'it' ? 'Elimina Definitivamente' : 'Delete Permanently'}
+        cancelLabel={language === 'it' ? 'Annulla' : 'Cancel'}
+        onConfirm={handleConfirmDeleteEntity}
+        onCancel={() => setIsDeletingEntity(false)}
+      />
     </div>
   );
 };

@@ -12,13 +12,8 @@ import { ChronologyTimelineView } from './modules/timeline/ChronologyTimelineVie
 import { DatabaseSchemaExplorerView } from './modules/schemas/DatabaseSchemaExplorerView.js';
 import { EntityDetailDrawer } from './components/shared/EntityDetailDrawer.js';
 import { GlobalSearchModal } from './components/search/GlobalSearchModal.js';
-import { ExtensionManagerModal } from './components/extensions/ExtensionManagerModal.js';
-import { InstanceConfigModal } from './components/config/InstanceConfigModal.js';
+import { UnifiedSettingsModal, SettingsTabId } from './components/config/UnifiedSettingsModal.js';
 import { AuthManagerModal } from './components/auth/AuthManagerModal.js';
-import { SystemOpsModal } from './components/system/SystemOpsModal.js';
-import { AuditLogModal } from './components/audit/AuditLogModal.js';
-import { ThemePaletteModal } from './components/theme/ThemePaletteModal.js';
-import { DataBackupModal } from './components/system/DataBackupModal.js';
 import { api } from './services/api.js';
 import {
   User,
@@ -43,15 +38,10 @@ export function App() {
   // Modals & Drawers State
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isExtensionsOpen, setIsExtensionsOpen] = useState(false);
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTabId>('general');
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isSystemOpsOpen, setIsSystemOpsOpen] = useState(false);
-  const [isAuditLogOpen, setIsAuditLogOpen] = useState(false);
-  const [isThemeOpen, setIsThemeOpen] = useState(false);
-  const [isBackupOpen, setIsBackupOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [activeTheme, setActiveTheme] = useState<string>('blue');
 
   // Quick Create Trigger for Domain Views
   const [quickCreateType, setQuickCreateType] = useState<string | null>(null);
@@ -120,11 +110,8 @@ export function App() {
       }
       if (e.key === 'Escape') {
         setIsSearchOpen(false);
-        setIsExtensionsOpen(false);
-        setIsConfigOpen(false);
+        setIsSettingsOpen(false);
         setIsAuthOpen(false);
-        setIsSystemOpsOpen(false);
-        setIsAuditLogOpen(false);
         setSelectedEntityId(null);
       }
     };
@@ -156,21 +143,21 @@ export function App() {
     }
   };
 
+  const openSettingsWithTab = (tab: SettingsTabId = 'general') => {
+    setSettingsInitialTab(tab);
+    setIsSettingsOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
-      {/* Top Header */}
+      {/* Top Header with Consolidated Settings Gear */}
       <Header
         currentUser={currentUser}
         config={config}
         mapsExtensionActive={mapsExtensionActive}
         onOpenSearch={() => setIsSearchOpen(true)}
-        onOpenExtensions={() => setIsExtensionsOpen(true)}
-        onOpenConfig={() => setIsConfigOpen(true)}
+        onOpenSettings={() => openSettingsWithTab('general')}
         onOpenAuth={() => setIsAuthOpen(true)}
-        onOpenSystemOps={() => setIsSystemOpsOpen(true)}
-        onOpenAuditLog={() => setIsAuditLogOpen(true)}
-        onOpenTheme={() => setIsThemeOpen(true)}
-        onOpenBackup={() => setIsBackupOpen(true)}
         onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
       />
 
@@ -185,7 +172,8 @@ export function App() {
           mapsExtensionActive={mapsExtensionActive}
           mobileOpen={mobileSidebarOpen}
           onCloseMobile={() => setMobileSidebarOpen(false)}
-          onOpenConfig={() => setIsConfigOpen(true)}
+          onOpenConfig={() => openSettingsWithTab('general')}
+          onOpenSettingsTab={(tab) => openSettingsWithTab(tab)}
         />
 
         {/* Content Viewport */}
@@ -199,10 +187,11 @@ export function App() {
                 mapsExtensionActive={mapsExtensionActive}
                 onNavigate={(mod) => setActiveModuleId(mod)}
                 onOpenQuickCreate={handleQuickCreate}
-                onOpenExtensions={() => setIsExtensionsOpen(true)}
-                onOpenConfig={() => setIsConfigOpen(true)}
-                onOpenSystemOps={() => setIsSystemOpsOpen(true)}
-                onOpenAuditLog={() => setIsAuditLogOpen(true)}
+                onOpenExtensions={() => openSettingsWithTab('extensions')}
+                onOpenConfig={() => openSettingsWithTab('general')}
+                onOpenSystemOps={() => openSettingsWithTab('system')}
+                onOpenAuditLog={() => openSettingsWithTab('audit')}
+                onOpenSearch={() => setIsSearchOpen(true)}
                 recentAuditLogs={recentAuditLogs}
                 systemMetrics={systemMetrics}
               />
@@ -241,7 +230,7 @@ export function App() {
               <PlacesView
                 onSelectEntity={(id) => setSelectedEntityId(id)}
                 mapsExtensionActive={mapsExtensionActive}
-                onOpenExtensions={() => setIsExtensionsOpen(true)}
+                onOpenExtensions={() => openSettingsWithTab('extensions')}
                 openCreateTrigger={quickCreateType === 'place'}
                 onResetCreateTrigger={() => setQuickCreateType(null)}
               />
@@ -291,17 +280,11 @@ export function App() {
         onSelectEntity={handleSelectEntityFromSearch}
       />
 
-      {/* Extension System Manager Modal */}
-      <ExtensionManagerModal
-        isOpen={isExtensionsOpen}
-        onClose={() => setIsExtensionsOpen(false)}
-        onExtensionToggled={refreshSystemData}
-      />
-
-      {/* Instance YAML Configuration Engine */}
-      <InstanceConfigModal
-        isOpen={isConfigOpen}
-        onClose={() => setIsConfigOpen(false)}
+      {/* Unified Settings Hub Modal (Gear Icon) */}
+      <UnifiedSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        initialTab={settingsInitialTab}
         onConfigSaved={refreshSystemData}
       />
 
@@ -314,33 +297,6 @@ export function App() {
           setCurrentUser(user);
           refreshSystemData();
         }}
-      />
-
-      {/* Hardware & Database Telemetry & Architecture Docs */}
-      <SystemOpsModal
-        isOpen={isSystemOpsOpen}
-        onClose={() => setIsSystemOpsOpen(false)}
-      />
-
-      {/* Audit Log Stream */}
-      <AuditLogModal
-        isOpen={isAuditLogOpen}
-        onClose={() => setIsAuditLogOpen(false)}
-      />
-
-      {/* Color & Theme Palette Customizer Modal */}
-      <ThemePaletteModal
-        isOpen={isThemeOpen}
-        onClose={() => setIsThemeOpen(false)}
-        activeTheme={activeTheme}
-        onSelectTheme={(t) => setActiveTheme(t)}
-      />
-
-      {/* Database Backup & Export Modal */}
-      <DataBackupModal
-        isOpen={isBackupOpen}
-        onClose={() => setIsBackupOpen(false)}
-        onBackupRestored={refreshSystemData}
       />
     </div>
   );

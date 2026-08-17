@@ -280,6 +280,25 @@ export interface TechnicalExtension {
   status: 'active' | 'disabled' | 'error';
 }
 
+// Database Engine Configuration
+export interface DatabaseEngineConfig {
+  engine: 'cloud_sql' | 'local_sqlite' | 'local_file';
+  active_instance: string;
+  local?: {
+    file_path: string; // e.g. "/var/lib/lifehub/data.sqlite" or "./data/lifehub.sqlite" on PC/RPi
+    auto_sync: boolean;
+    backup_on_save: boolean;
+    format?: 'sqlite' | 'json';
+  };
+  cloud_sql?: {
+    provider: string; // "google_cloud_sql"
+    region: string; // "europe-west2"
+    instance_id: string; // "ai-studio-80c1662d"
+    db_name: string; // "lifehub_main"
+    status?: 'connected' | 'idle' | 'disconnected';
+  };
+}
+
 // Instance Configuration
 export interface InstanceConfig {
   instance: {
@@ -288,6 +307,7 @@ export interface InstanceConfig {
     host_env?: string;
     version?: string;
   };
+  database?: DatabaseEngineConfig;
   modules: Record<string, boolean>; // e.g. { people: true, places: true, events: true, knowledge: true, buildings: false }
   extensions: Record<string, boolean>; // e.g. { maps: true, pg_trgm: true }
   settings?: {

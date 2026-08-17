@@ -341,7 +341,30 @@ export const api = {
   // Databases & Schema Inspector
   databases: {
     list: () =>
-      request<{ active_database_id: string; databases: DatabaseInfo[] }>('/api/databases'),
+      request<{
+        active_database_id: string;
+        databases: DatabaseInfo[];
+        engine?: 'cloud_sql' | 'local_sqlite' | 'local_file';
+        database_config?: any;
+        cloud_sql_info?: any;
+        local_storage_info?: any;
+      }>('/api/databases'),
+    switchEngine: (data: {
+      engine: 'cloud_sql' | 'local_sqlite' | 'local_file';
+      file_path?: string;
+      auto_sync?: boolean;
+      active_instance?: string;
+    }) =>
+      request<{
+        success: boolean;
+        engine: string;
+        database_config: any;
+        active_database_id: string;
+        message: string;
+      }>('/api/databases/engine', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     switchActive: (id: string) =>
       request<{ success: boolean; active_database_id: string; databases: DatabaseInfo[] }>(
         '/api/databases/active',
@@ -389,6 +412,39 @@ export const api = {
       });
       return request<SchemaComparisonResult>(`/api/databases/compare?${sp.toString()}`);
     },
+  },
+
+  // Translation & Temporary Cache Service for User-Entered Data
+  translate: {
+    translateText: (text: string, targetLang: 'en' | 'it', sourceLang?: string) =>
+      request<{
+        success: boolean;
+        original: string;
+        translated: string;
+        cached: boolean;
+        targetLang: string;
+      }>('/api/translate', {
+        method: 'POST',
+        body: JSON.stringify({ text, targetLang, sourceLang }),
+      }),
+    translateBatch: (texts: string[], targetLang: 'en' | 'it') =>
+      request<{
+        success: boolean;
+        results: Array<{ original: string; translated: string; cached: boolean }>;
+        targetLang: string;
+      }>('/api/translate', {
+        method: 'POST',
+        body: JSON.stringify({ texts, targetLang }),
+      }),
+    getCacheStats: () =>
+      request<{
+        success: boolean;
+        stats: { totalEntries: number; cacheFilePath: string; fileSizeBytes: number };
+      }>('/api/translate/stats'),
+    clearCache: () =>
+      request<{ success: boolean; message: string }>('/api/translate/cache', {
+        method: 'DELETE',
+      }),
   },
 };
 
