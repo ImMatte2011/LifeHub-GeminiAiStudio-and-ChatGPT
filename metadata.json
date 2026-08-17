@@ -1,0 +1,6 @@
+{
+  "name": "LifeHub",
+  "description": "Modular and extensible personal information platform with clean architecture (Core, Meta, Shared, Domain Modules & Extensions).",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
