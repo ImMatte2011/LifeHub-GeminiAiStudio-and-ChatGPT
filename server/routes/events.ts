@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
 import { EventsEvent, EventsParticipant } from '../db/types.js';
-import { AuthenticatedRequest } from '../middleware/auth.js';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+
+// Protect all events routes
+router.use(requireAuth);
 
 // List events with timeline filtering
 router.get('/', (req, res) => {

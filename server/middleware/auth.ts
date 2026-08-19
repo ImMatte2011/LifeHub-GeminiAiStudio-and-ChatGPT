@@ -34,12 +34,12 @@ export function authenticateRequest(
     const verified = verifyCryptoToken(token);
     if (verified.valid && verified.payload && verified.payload.sub) {
       const user = db.users.get(verified.payload.sub);
-      if (user && user.is_active) {
+      if (user) {
         req.user = user;
         req.userId = user.id;
         req.userRole = user.role_id;
         const role = db.roles.get(user.role_id);
-        req.isAdmin = role?.is_admin ?? user.role_id === 'admin';
+        req.isAdmin = (role?.is_admin ?? user.role_id === 'admin') && user.is_active;
         return next();
       }
     }

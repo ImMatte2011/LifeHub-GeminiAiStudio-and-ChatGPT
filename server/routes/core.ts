@@ -5,7 +5,7 @@ import path from 'path';
 import { db } from '../db/database.js';
 import { InstanceConfigManager } from '../services/instanceConfig.js';
 import { ExtensionManager } from '../services/extensionManager.js';
-import { AuthenticatedRequest } from '../middleware/auth.js';
+import { AuthenticatedRequest, requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -30,7 +30,7 @@ router.get('/modules/active', (req, res) => {
 });
 
 // List all registered modules (enabled or disabled)
-router.get('/modules', (req, res) => {
+router.get('/modules', requireAuth, (req: AuthenticatedRequest, res) => {
   const modules = Array.from(db.modules.values()).map((m) => {
     const extCheck = ExtensionManager.verifyModuleExtensions(m.required_extensions);
     return {
@@ -42,8 +42,8 @@ router.get('/modules', (req, res) => {
   return res.json(modules);
 });
 
-// Toggle module state
-router.post('/modules/:id/toggle', (req: AuthenticatedRequest, res) => {
+// Toggle module state (Admin)
+router.post('/modules/:id/toggle', requireAdmin, (req: AuthenticatedRequest, res) => {
   const { enabled } = req.body;
   const mod = db.modules.get(req.params.id);
   if (!mod) return res.status(404).json({ error: 'Module not found' });
@@ -65,11 +65,11 @@ router.post('/modules/:id/toggle', (req: AuthenticatedRequest, res) => {
 });
 
 // Instance Config Management
-router.get('/config', (req, res) => {
+router.get('/config', requireAuth, (req: AuthenticatedRequest, res) => {
   return res.json(InstanceConfigManager.getConfig());
 });
 
-router.put('/config', (req: AuthenticatedRequest, res) => {
+router.put('/config', requireAdmin, (req: AuthenticatedRequest, res) => {
   try {
     const updated = InstanceConfigManager.applyConfig(req.body);
     db.saveToDisk();
@@ -81,11 +81,11 @@ router.put('/config', (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.get('/config/yaml', (req, res) => {
+router.get('/config/yaml', requireAuth, (req: AuthenticatedRequest, res) => {
   return res.type('text/yaml').send(InstanceConfigManager.getYaml());
 });
 
-router.post('/config/yaml', (req: AuthenticatedRequest, res) => {
+router.post('/config/yaml', requireAdmin, (req: AuthenticatedRequest, res) => {
   try {
     const yamlString = typeof req.body === 'string' ? req.body : req.body.yaml;
     const updated = InstanceConfigManager.applyConfig(yamlString);
@@ -98,12 +98,12 @@ router.post('/config/yaml', (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.get('/config/presets', (req, res) => {
+router.get('/config/presets', requireAuth, (req: AuthenticatedRequest, res) => {
   return res.json(InstanceConfigManager.getPresets());
 });
 
 // Audit Log
-router.get('/audit', (req, res) => {
+router.get('/audit', requireAuth, (req: AuthenticatedRequest, res) => {
   const { limit = 100, entity_type, action } = req.query;
   let logs = db.auditLog;
   if (entity_type) {
@@ -115,14 +115,14 @@ router.get('/audit', (req, res) => {
   return res.json(logs.slice(0, Number(limit)));
 });
 
-// Backup Export & Import
-router.get('/backup/export', (req, res) => {
+// Backup Export & Import (Admin)
+router.get('/backup/export', requireAdmin, (req: AuthenticatedRequest, res) => {
   const backup = db.exportDatabaseBackup();
   res.setHeader('Content-Disposition', `attachment; filename=lifehub_backup_${Date.now()}.json`);
   return res.json(backup);
 });
 
-router.post('/backup/import', (req, res) => {
+router.post('/backup/import', requireAdmin, (req: AuthenticatedRequest, res) => {
   try {
     const result = db.importDatabaseBackup(req.body, true);
     return res.json(result);
@@ -132,7 +132,7 @@ router.post('/backup/import', (req, res) => {
 });
 
 // Real System Operations, Host OS & Hardware Metrics
-router.get('/system/metrics', (req, res) => {
+router.get('/system/metrics', requireAuth, (req: AuthenticatedRequest, res) => {
   const uptimeSeconds = Math.floor(os.uptime());
   const days = Math.floor(uptimeSeconds / 86400);
   const hours = Math.floor((uptimeSeconds % 86400) / 3600);

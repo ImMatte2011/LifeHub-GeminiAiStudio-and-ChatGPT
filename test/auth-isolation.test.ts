@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { db, getSecretKey, generateCryptoToken, verifyCryptoToken } from '../server/db/database.js';
+import { db, getSecretKey, generateCryptoToken, verifyCryptoToken, hashPassword, verifyPassword } from '../server/db/database.js';
 import {
   authenticateRequest,
   requireAuth,
@@ -277,6 +277,28 @@ async function runTests() {
     requireAdmin(adminReq, adminRes, () => { adminPassed = true; });
 
     assert.ok(adminPassed, 'Admin user must pass requireAdmin');
+
+    // 6d. Disabled user account is rejected by requireAuth with 403
+    db.users.set('user_disabled_test', {
+      id: 'user_disabled_test',
+      username: 'disabled_user',
+      email: 'disabled@test.com',
+      password_hash: 'hash_disabled',
+      full_name: 'Disabled User',
+      role_id: 'user',
+      is_active: false,
+      created_at: new Date().toISOString(),
+    });
+    const tokenDisabled = generateCryptoToken('user_disabled_test', 'disabled_user');
+    const disabledReq = createMockRequest(`Bearer ${tokenDisabled}`);
+    const disabledRes = createMockResponse();
+    let disabledPassed = false;
+
+    authenticateRequest(disabledReq, disabledRes, () => {});
+    requireAuth(disabledReq, disabledRes, () => { disabledPassed = true; });
+
+    assert.strictEqual(disabledPassed, false, 'Disabled user must not pass requireAuth');
+    assert.strictEqual(disabledRes.statusCode, 403, 'Disabled user must receive 403 Forbidden');
   });
 
   // Test 7: Entity Ownership and Audit Trail attribution
@@ -292,6 +314,18 @@ async function runTests() {
     db.logAudit(testUserId, 'CREATE', 'Created test item', entityId, 'test_item');
     const latestAudit = db.auditLog[0];
     assert.strictEqual(latestAudit.user_id, testUserId, 'Audit log user_id must match authenticated user');
+  });
+
+  // Test 8: Secure Password Hashing & Verification
+  await test('8. Password hashing enforces PBKDF2 with salt and rejects demo/plaintext bypasses', () => {
+    const testPass = 'SecurePass123!_Strong';
+    const hash = hashPassword(testPass);
+
+    assert.ok(hash.startsWith('pbkdf2$'), 'Hash must start with pbkdf2$ prefix');
+    assert.ok(verifyPassword(testPass, hash), 'Correct password must verify');
+    assert.strictEqual(verifyPassword('WrongPass', hash), false, 'Wrong password must fail');
+    assert.strictEqual(verifyPassword('demo', hash), false, 'Demo fallback must not verify non-demo hash');
+    assert.strictEqual(verifyPassword('demo', 'legacy_unhashed_pass'), false, 'Non-pbkdf2 hash must be rejected');
   });
 
   console.log('\n------------------------------------------------------');

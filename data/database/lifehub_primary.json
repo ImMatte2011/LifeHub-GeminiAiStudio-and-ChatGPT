@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "exported_at": "2026-08-18T15:48:05.378Z",
+  "exported_at": "2026-08-19T14:47:05.268Z",
   "instance_config": {
     "instance": {
       "name": "LifeHub",
@@ -89,7 +89,7 @@
         "full_name": "Alice Developer",
         "role_id": "user",
         "is_active": true,
-        "created_at": "2026-08-18T15:48:05.355Z"
+        "created_at": "2026-08-19T14:47:05.245Z"
       },
       {
         "id": "user_bob",
@@ -99,7 +99,7 @@
         "full_name": "Bob Manager",
         "role_id": "editor",
         "is_active": true,
-        "created_at": "2026-08-18T15:48:05.355Z"
+        "created_at": "2026-08-19T14:47:05.245Z"
       },
       {
         "id": "user_charlie",
@@ -109,7 +109,7 @@
         "full_name": "Charlie Test",
         "role_id": "user",
         "is_active": true,
-        "created_at": "2026-08-18T15:48:05.355Z"
+        "created_at": "2026-08-19T14:47:05.245Z"
       },
       {
         "id": "user_regular",
@@ -119,7 +119,7 @@
         "full_name": "Regular User",
         "role_id": "user",
         "is_active": true,
-        "created_at": "2026-08-18T15:48:05.355Z"
+        "created_at": "2026-08-19T14:47:05.245Z"
       },
       {
         "id": "user_admin_test",
@@ -129,7 +129,7 @@
         "full_name": "Admin User",
         "role_id": "admin",
         "is_active": true,
-        "created_at": "2026-08-18T15:48:05.355Z"
+        "created_at": "2026-08-19T14:47:05.245Z"
       },
       {
         "id": "user_u1",
@@ -139,7 +139,7 @@
         "full_name": "User 1",
         "role_id": "user",
         "is_active": true,
-        "created_at": "2026-08-18T15:48:05.358Z"
+        "created_at": "2026-08-19T14:47:05.247Z"
       },
       {
         "id": "user_u2",
@@ -149,7 +149,7 @@
         "full_name": "User 2",
         "role_id": "editor",
         "is_active": true,
-        "created_at": "2026-08-18T15:48:05.358Z"
+        "created_at": "2026-08-19T14:47:05.247Z"
       },
       {
         "id": "user_u3",
@@ -159,7 +159,17 @@
         "full_name": "User 3 (Admin)",
         "role_id": "admin",
         "is_active": true,
-        "created_at": "2026-08-18T15:48:05.358Z"
+        "created_at": "2026-08-19T14:47:05.247Z"
+      },
+      {
+        "id": "user_disabled_test",
+        "username": "disabled_user",
+        "email": "disabled@test.com",
+        "password_hash": "hash_disabled",
+        "full_name": "Disabled User",
+        "role_id": "user",
+        "is_active": false,
+        "created_at": "2026-08-19T14:47:05.268Z"
       }
     ],
     "roles": [
@@ -302,6 +312,30 @@
         "title": "Test Item Title",
         "created_at": "2026-08-18T15:48:05.378Z",
         "updated_at": "2026-08-18T15:48:05.378Z",
+        "created_by": "user_audited_99"
+      },
+      {
+        "id": "entity_test_1787139497573",
+        "entity_type": "test_item",
+        "title": "Test Item Title",
+        "created_at": "2026-08-19T11:38:17.573Z",
+        "updated_at": "2026-08-19T11:38:17.573Z",
+        "created_by": "user_audited_99"
+      },
+      {
+        "id": "entity_test_1787139529751",
+        "entity_type": "test_item",
+        "title": "Test Item Title",
+        "created_at": "2026-08-19T11:38:49.752Z",
+        "updated_at": "2026-08-19T11:38:49.752Z",
+        "created_by": "user_audited_99"
+      },
+      {
+        "id": "entity_test_1787150825268",
+        "entity_type": "test_item",
+        "title": "Test Item Title",
+        "created_at": "2026-08-19T14:47:05.268Z",
+        "updated_at": "2026-08-19T14:47:05.268Z",
         "created_by": "user_audited_99"
       }
     ],

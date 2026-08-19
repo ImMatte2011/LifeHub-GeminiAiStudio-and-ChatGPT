@@ -2,9 +2,12 @@ import { Router } from 'express';
 import { db } from '../db/database.js';
 import { BuildingsBuilding } from '../db/types.js';
 import { ExtensionManager } from '../services/extensionManager.js';
-import { AuthenticatedRequest } from '../middleware/auth.js';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+
+// Protect all buildings routes
+router.use(requireAuth);
 
 // List Buildings
 router.get('/', (req, res) => {

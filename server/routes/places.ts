@@ -2,9 +2,12 @@ import { Router } from 'express';
 import { db, calculateDistanceKm } from '../db/database.js';
 import { PlacesPlace, PlacesVisit } from '../db/types.js';
 import { ExtensionManager } from '../services/extensionManager.js';
-import { AuthenticatedRequest } from '../middleware/auth.js';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+
+// Protect all places routes
+router.use(requireAuth);
 
 // List Places with optional distance calculation if user coordinates provided
 router.get('/', (req, res) => {

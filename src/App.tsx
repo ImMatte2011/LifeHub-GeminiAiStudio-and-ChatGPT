@@ -14,6 +14,7 @@ import { EntityDetailDrawer } from './components/shared/EntityDetailDrawer.js';
 import { GlobalSearchModal } from './components/search/GlobalSearchModal.js';
 import { UnifiedSettingsModal, SettingsTabId } from './components/config/UnifiedSettingsModal.js';
 import { AuthManagerModal } from './components/auth/AuthManagerModal.js';
+import { LoginView } from './components/auth/LoginView.js';
 import { api } from './services/api.js';
 import {
   User,
@@ -23,9 +24,11 @@ import {
   AuditLogItem,
   TechnicalExtension,
 } from './types/index.js';
+import { Layers } from 'lucide-react';
 
 export function App() {
   // Global State
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeModuleId, setActiveModuleId] = useState<string>('dashboard');
   const [modules, setModules] = useState<ModuleInfo[]>([]);
@@ -49,8 +52,16 @@ export function App() {
   // Fetch full system state
   const refreshSystemData = useCallback(async () => {
     try {
+      const authRes = await api.auth.me();
+      if (!authRes || !authRes.user) {
+        setCurrentUser(null);
+        setIsAuthChecking(false);
+        return;
+      }
+
+      setCurrentUser(authRes.user);
+
       const [
-        authRes,
         modulesRes,
         configRes,
         extList,
@@ -62,7 +73,6 @@ export function App() {
         knowledgeList,
         buildingsList,
       ] = await Promise.all([
-        api.auth.me(),
         api.core.getActiveModules(),
         api.core.getConfig(),
         api.extensions.list(),
@@ -75,7 +85,6 @@ export function App() {
         api.buildings.list(),
       ]);
 
-      setCurrentUser(authRes.user);
       setModules(modulesRes.active_modules);
       setConfig(configRes);
 
@@ -92,8 +101,11 @@ export function App() {
         knowledge: knowledgeList.length,
         buildings: buildingsList.length,
       });
-    } catch (err) {
-      console.error('Failed to load initial LifeHub state:', err);
+    } catch {
+      // Unauthenticated session
+      setCurrentUser(null);
+    } finally {
+      setIsAuthChecking(false);
     }
   }, []);
 
@@ -147,6 +159,33 @@ export function App() {
     setSettingsInitialTab(tab);
     setIsSettingsOpen(true);
   };
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-xl shadow-blue-500/20">
+            <Layers className="w-6 h-6 animate-spin" style={{ animationDuration: '3s' }} />
+          </div>
+          <div className="text-center">
+            <div className="text-sm font-bold text-white tracking-wide">LifeHub</div>
+            <div className="text-xs text-slate-400 font-mono mt-0.5">Initializing secure session...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <LoginView
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          refreshSystemData();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
@@ -296,6 +335,9 @@ export function App() {
         onUserSwitched={(user) => {
           setCurrentUser(user);
           refreshSystemData();
+        }}
+        onLogout={() => {
+          setCurrentUser(null);
         }}
       />
     </div>

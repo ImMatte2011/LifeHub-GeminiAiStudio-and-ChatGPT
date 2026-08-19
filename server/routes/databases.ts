@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { dbManager } from '../db/databaseManager.js';
 import { db } from '../db/database.js';
+import { AuthenticatedRequest, requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
 // GET /api/databases - List all database instances and engine status
-router.get('/', (req, res) => {
+router.get('/', requireAuth, (req: AuthenticatedRequest, res) => {
   const dbs = dbManager.getDatabaseList();
   const activeId = dbManager.getActiveDatabaseId();
   const dbConfig = db.instanceConfig.database || {
@@ -52,8 +53,8 @@ router.get('/', (req, res) => {
   });
 });
 
-// POST /api/databases/engine - Switch database engine and configure local file path
-router.post('/engine', (req, res) => {
+// POST /api/databases/engine - Switch database engine and configure local file path (Admin)
+router.post('/engine', requireAdmin, (req: AuthenticatedRequest, res) => {
   const { engine, file_path, auto_sync, active_instance } = req.body;
   if (!engine || !['cloud_sql', 'local_sqlite', 'local_file'].includes(engine)) {
     return res.status(400).json({ error: 'Valid engine is required: cloud_sql, local_sqlite, or local_file' });
@@ -92,7 +93,7 @@ router.post('/engine', (req, res) => {
   }
 
   db.logAudit(
-    'user_admin',
+    req.userId || 'user_admin',
     'CONFIG_CHANGE',
     `Switched database engine to ${engine.toUpperCase()} (${engine === 'cloud_sql' ? 'Google Cloud SQL europe-west2' : file_path || 'Local File/RPi'})`,
     undefined,
@@ -109,8 +110,8 @@ router.post('/engine', (req, res) => {
   });
 });
 
-// POST /api/databases/active - Switch the active database
-router.post('/active', (req, res) => {
+// POST /api/databases/active - Switch the active database (Admin)
+router.post('/active', requireAdmin, (req: AuthenticatedRequest, res) => {
   const { id } = req.body;
   if (!id) {
     return res.status(400).json({ error: 'Database ID is required' });
@@ -128,8 +129,8 @@ router.post('/active', (req, res) => {
   });
 });
 
-// POST /api/databases - Create a new database instance
-router.post('/', (req, res) => {
+// POST /api/databases - Create a new database instance (Admin)
+router.post('/', requireAdmin, (req: AuthenticatedRequest, res) => {
   const { id, name, description, category } = req.body;
   if (!id || !name) {
     return res.status(400).json({ error: 'ID and Name are required to create a database' });
@@ -144,7 +145,7 @@ router.post('/', (req, res) => {
 });
 
 // GET /api/databases/:dbId/schemas - Get all schemas for a database
-router.get('/:dbId/schemas', (req, res) => {
+router.get('/:dbId/schemas', requireAuth, (req: AuthenticatedRequest, res) => {
   const { dbId } = req.params;
   try {
     const schemas = dbManager.getSchemasForDatabase(dbId);
@@ -159,7 +160,7 @@ router.get('/:dbId/schemas', (req, res) => {
 });
 
 // GET /api/databases/:dbId/schemas/:schemaName - Get details for a specific schema
-router.get('/:dbId/schemas/:schemaName', (req, res) => {
+router.get('/:dbId/schemas/:schemaName', requireAuth, (req: AuthenticatedRequest, res) => {
   const { dbId, schemaName } = req.params;
   const schemas = dbManager.getSchemasForDatabase(dbId);
   const targetSchema = schemas.find((s) => s.name.toLowerCase() === schemaName.toLowerCase());
@@ -172,7 +173,7 @@ router.get('/:dbId/schemas/:schemaName', (req, res) => {
 });
 
 // GET /api/databases/:dbId/schemas/:schemaName/tables/:tableName/records - Get records for a specific table
-router.get('/:dbId/schemas/:schemaName/tables/:tableName/records', (req, res) => {
+router.get('/:dbId/schemas/:schemaName/tables/:tableName/records', requireAuth, (req: AuthenticatedRequest, res) => {
   const { dbId, schemaName, tableName } = req.params;
   const { search, limit = 50, page = 1 } = req.query;
 
@@ -210,7 +211,7 @@ router.get('/:dbId/schemas/:schemaName/tables/:tableName/records', (req, res) =>
 });
 
 // GET /api/databases/compare - Compare two schemas or two databases side-by-side
-router.get('/compare', (req, res) => {
+router.get('/compare', requireAuth, (req: AuthenticatedRequest, res) => {
   const { dbA = 'lifehub_main', schemaA = 'people', dbB = 'lifehub_main', schemaB = 'shared' } = req.query;
 
   const schemasA = dbManager.getSchemasForDatabase(dbA as string);

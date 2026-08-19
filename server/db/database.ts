@@ -84,9 +84,9 @@ export function hashPassword(password: string): string {
 
 export function verifyPassword(password: string, storedHash: string): boolean {
   if (!storedHash || !password) return false;
-  // Backward compatibility with legacy plain text passwords if any
+  // Strictly enforce PBKDF2 hash format - no plaintext or bypasses allowed
   if (!storedHash.startsWith('pbkdf2$')) {
-    return password === storedHash || password === 'demo';
+    return false;
   }
 
   const parts = storedHash.split('$');
@@ -96,8 +96,10 @@ export function verifyPassword(password: string, storedHash: string): boolean {
   const salt = parts[2];
   const originalKey = parts[3];
 
-  const derivedKey = crypto.pbkdf2Sync(password, salt, iterations, 64, 'sha512').toString('hex');
+  if (!salt || !originalKey) return false;
+
   try {
+    const derivedKey = crypto.pbkdf2Sync(password, salt, iterations, 64, 'sha512').toString('hex');
     return crypto.timingSafeEqual(Buffer.from(derivedKey, 'hex'), Buffer.from(originalKey, 'hex'));
   } catch {
     return false;
@@ -1146,7 +1148,12 @@ export class LifeHubDatabase {
     if (backup.instance_config) this.instanceConfig = backup.instance_config;
     if (backup.core.users) {
       this.users.clear();
-      for (const u of backup.core.users) this.users.set(u.id, u);
+      for (const u of backup.core.users) {
+        if (u.password_hash && !u.password_hash.startsWith('pbkdf2$')) {
+          u.password_hash = hashPassword(u.password_hash);
+        }
+        this.users.set(u.id, u);
+      }
     }
     if (backup.core.roles) {
       this.roles.clear();

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db, calculateSimilarity } from '../db/database.js';
 import { ExtensionManager } from '../services/extensionManager.js';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -18,7 +19,7 @@ export interface SearchResultItem {
 }
 
 // Global Search API (/api/search?q=arch&module=knowledge&tag=tag_tech)
-router.get('/', (req, res) => {
+router.get('/', requireAuth, (req: AuthenticatedRequest, res) => {
   const q = String(req.query.q || '').trim();
   const targetModule = req.query.module ? String(req.query.module) : undefined;
   const targetTag = req.query.tag ? String(req.query.tag) : undefined;

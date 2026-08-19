@@ -1,10 +1,11 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { translationCacheService } from '../services/translationCache.js';
+import { AuthenticatedRequest, requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
 // POST /api/translate
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { texts, text, targetLang = 'it', sourceLang } = req.body;
 
@@ -32,7 +33,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // GET /api/translate/stats
-router.get('/stats', (req: Request, res: Response) => {
+router.get('/stats', requireAuth, (req: AuthenticatedRequest, res: Response) => {
   try {
     const stats = translationCacheService.getCacheStats();
     return res.json({ success: true, stats });
@@ -41,8 +42,8 @@ router.get('/stats', (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/translate/cache
-router.delete('/cache', (req: Request, res: Response) => {
+// DELETE /api/translate/cache (Admin)
+router.delete('/cache', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
   try {
     translationCacheService.clearCache();
     return res.json({ success: true, message: 'Translation temporary cache file cleared' });

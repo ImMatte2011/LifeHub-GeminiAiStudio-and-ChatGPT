@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
 import { SharedTag, SharedLink } from '../db/types.js';
-import { AuthenticatedRequest } from '../middleware/auth.js';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+
+// Protect all shared routes
+router.use(requireAuth);
 
 // Tags CRUD
 router.get('/tags', (req, res) => {

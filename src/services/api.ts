@@ -22,9 +22,16 @@ import {
 } from '../types/index.js';
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('lifehub_token') : null;
+  const authHeaders: Record<string, string> = {};
+  if (token) {
+    authHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(endpoint, {
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...(options?.headers || {}),
     },
     ...options,
@@ -50,18 +57,53 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 export const api = {
   // Auth & Core Users
   auth: {
-    me: () => request<{
-      user: User;
-      role: Role;
-      permissions: string[];
-      multi_user_enabled: boolean;
-      all_users: User[];
-    }>('/api/core/auth/me'),
-    switchUser: (userId: string) =>
-      request<{ success: boolean; user: User }>('/api/core/auth/switch-user', {
+    me: async () => {
+      const data = await request<{
+        user: User;
+        role: Role;
+        permissions: string[];
+        multi_user_enabled: boolean;
+        all_users: User[];
+        token?: string;
+      }>('/api/core/auth/me');
+      if (data?.token && typeof window !== 'undefined') {
+        localStorage.setItem('lifehub_token', data.token);
+      }
+      return data;
+    },
+    login: async (username: string, password: string) => {
+      const data = await request<{
+        success: boolean;
+        user: User;
+        token: string;
+      }>('/api/core/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
+      if (data?.token && typeof window !== 'undefined') {
+        localStorage.setItem('lifehub_token', data.token);
+      }
+      return data;
+    },
+    logout: async () => {
+      try {
+        await request<{ success: boolean }>('/api/core/auth/logout', { method: 'POST' });
+      } finally {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('lifehub_token');
+        }
+      }
+    },
+    switchUser: async (userId: string) => {
+      const data = await request<{ success: boolean; user: User; token: string }>('/api/core/auth/switch-user', {
         method: 'POST',
         body: JSON.stringify({ user_id: userId }),
-      }),
+      });
+      if (data?.token && typeof window !== 'undefined') {
+        localStorage.setItem('lifehub_token', data.token);
+      }
+      return data;
+    },
     getUsers: () => request<User[]>('/api/core/auth/users'),
     createUser: (data: Partial<User> & { password?: string }) =>
       request<User>('/api/core/auth/users', {

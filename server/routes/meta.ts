@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
 import { MetaEntityType, MetaPropertyDefinition } from '../db/types.js';
-import { AuthenticatedRequest } from '../middleware/auth.js';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+
+// Protect all meta routes
+router.use(requireAuth);
 
 // Entity Types (Dynamic Domain Catalogs)
 router.get('/entity-types', (req, res) => {

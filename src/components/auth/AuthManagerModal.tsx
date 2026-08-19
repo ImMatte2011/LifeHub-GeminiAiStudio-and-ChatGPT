@@ -11,6 +11,7 @@ import {
   Key,
   CheckCircle2,
   AlertCircle,
+  LogOut,
 } from 'lucide-react';
 import { User, Role } from '../../types/index.js';
 import { api } from '../../services/api.js';
@@ -20,6 +21,7 @@ interface AuthManagerModalProps {
   onClose: () => void;
   currentUser: User | null;
   onUserSwitched: (user: User) => void;
+  onLogout?: () => void;
 }
 
 export const AuthManagerModal: React.FC<AuthManagerModalProps> = ({
@@ -27,6 +29,7 @@ export const AuthManagerModal: React.FC<AuthManagerModalProps> = ({
   onClose,
   currentUser,
   onUserSwitched,
+  onLogout,
 }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -309,10 +312,24 @@ export const AuthManagerModal: React.FC<AuthManagerModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-neutral-950 border-t border-neutral-800 flex justify-end">
+        <div className="p-4 bg-neutral-950 border-t border-neutral-800 flex items-center justify-between">
+          {onLogout ? (
+            <button
+              type="button"
+              onClick={async () => {
+                await api.auth.logout();
+                onLogout();
+                onClose();
+              }}
+              className="px-3.5 py-1.5 rounded-lg border border-red-900/60 bg-red-950/40 hover:bg-red-900/60 text-red-300 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Sign Out
+            </button>
+          ) : <div />}
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-medium"
+            className="px-4 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-medium cursor-pointer"
           >
             Close
           </button>

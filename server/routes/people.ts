@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
 import { PeoplePerson } from '../db/types.js';
-import { AuthenticatedRequest } from '../middleware/auth.js';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+
+// Protect all people routes
+router.use(requireAuth);
 
 // List Persons with related tags, primary contact, and entity metadata
 router.get('/', (req, res) => {

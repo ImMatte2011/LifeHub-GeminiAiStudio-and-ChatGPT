@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
 import { KnowledgeItem } from '../db/types.js';
-import { AuthenticatedRequest } from '../middleware/auth.js';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+
+// Protect all knowledge routes
+router.use(requireAuth);
 
 // Validate properties against Meta Layer Property Definitions
 function validateProperties(entityTypeId: string, properties: Record<string, any>) {

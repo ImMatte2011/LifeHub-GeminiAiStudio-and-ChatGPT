@@ -1,21 +1,21 @@
 import { Router } from 'express';
 import { ExtensionManager } from '../services/extensionManager.js';
-import { AuthenticatedRequest } from '../middleware/auth.js';
+import { AuthenticatedRequest, requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
 // List all registered technical extensions
-router.get('/', (req, res) => {
+router.get('/', requireAuth, (req: AuthenticatedRequest, res) => {
   return res.json(ExtensionManager.listExtensions());
 });
 
 // Full Diagnostic Report
-router.get('/diagnostics', (req, res) => {
+router.get('/diagnostics', requireAuth, (req: AuthenticatedRequest, res) => {
   return res.json(ExtensionManager.getDiagnosticReport());
 });
 
-// Toggle an extension
-router.post('/:code/toggle', (req: AuthenticatedRequest, res) => {
+// Toggle an extension (Admin)
+router.post('/:code/toggle', requireAdmin, (req: AuthenticatedRequest, res) => {
   const { enabled } = req.body;
   const userId = req.userId || 'user_admin';
   try {
