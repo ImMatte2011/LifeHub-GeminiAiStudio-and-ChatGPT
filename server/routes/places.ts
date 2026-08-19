@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db, calculateDistanceKm } from '../db/database.js';
 import { PlacesPlace, PlacesVisit } from '../db/types.js';
 import { ExtensionManager } from '../services/extensionManager.js';
+import { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -118,7 +119,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create Place
-router.post('/', (req, res) => {
+router.post('/', (req: AuthenticatedRequest, res) => {
   const {
     name,
     category,
@@ -138,9 +139,10 @@ router.post('/', (req, res) => {
   }
 
   const id = 'place_' + Math.random().toString(36).substring(2, 9);
+  const userId = req.userId || 'user_admin';
 
   // 1. Register into core.entities
-  db.registerEntity(id, 'place', name);
+  db.registerEntity(id, 'place', name, userId);
 
   // 2. Create in places.places
   const place: PlacesPlace = {
@@ -165,7 +167,7 @@ router.post('/', (req, res) => {
     }
   }
 
-  db.logAudit('user_admin', 'CREATE', `Created Place: ${name} (${place.latitude}, ${place.longitude})`, id, 'place');
+  db.logAudit(userId, 'CREATE', `Created Place: ${name} (${place.latitude}, ${place.longitude})`, id, 'place');
 
   return res.json({
     ...place,
@@ -175,9 +177,10 @@ router.post('/', (req, res) => {
 });
 
 // Update Place
-router.put('/:id', (req, res) => {
+router.put('/:id', (req: AuthenticatedRequest, res) => {
   const place = db.places.get(req.params.id);
   if (!place) return res.status(404).json({ error: 'Place not found' });
+  const userId = req.userId || 'user_admin';
 
   const {
     name,
@@ -204,7 +207,7 @@ router.put('/:id', (req, res) => {
   if (website !== undefined) place.website = website;
   if (phone !== undefined) place.phone = phone;
 
-  db.registerEntity(place.id, 'place', place.name);
+  db.registerEntity(place.id, 'place', place.name, userId);
 
   if (Array.isArray(tags)) {
     db.entityTags = db.entityTags.filter((et) => et.entity_id !== place.id);
@@ -213,7 +216,7 @@ router.put('/:id', (req, res) => {
     }
   }
 
-  db.logAudit('user_admin', 'UPDATE', `Updated Place: ${place.name}`, place.id, 'place');
+  db.logAudit(userId, 'UPDATE', `Updated Place: ${place.name}`, place.id, 'place');
 
   return res.json({
     ...place,
@@ -222,23 +225,25 @@ router.put('/:id', (req, res) => {
 });
 
 // Delete Place
-router.delete('/:id', (req, res) => {
+router.delete('/:id', (req: AuthenticatedRequest, res) => {
   const place = db.places.get(req.params.id);
   if (!place) return res.status(404).json({ error: 'Place not found' });
+  const userId = req.userId || 'user_admin';
 
   db.deleteEntity(place.id);
   db.places.delete(place.id);
   db.visits = db.visits.filter((v) => v.place_id !== place.id);
 
-  db.logAudit('user_admin', 'DELETE', `Deleted Place: ${place.name}`, place.id, 'place');
+  db.logAudit(userId, 'DELETE', `Deleted Place: ${place.name}`, place.id, 'place');
 
   return res.json({ success: true });
 });
 
 // Add Visit log
-router.post('/:id/visits', (req, res) => {
+router.post('/:id/visits', (req: AuthenticatedRequest, res) => {
   const place = db.places.get(req.params.id);
   if (!place) return res.status(404).json({ error: 'Place not found' });
+  const userId = req.userId || 'user_admin';
 
   const { visited_at, rating, notes, photos } = req.body;
   const visit: PlacesVisit = {
@@ -251,7 +256,7 @@ router.post('/:id/visits', (req, res) => {
   };
 
   db.visits.push(visit);
-  db.logAudit('user_admin', 'CREATE', `Logged visit to ${place.name}`, place.id, 'place');
+  db.logAudit(userId, 'CREATE', `Logged visit to ${place.name}`, place.id, 'place');
 
   return res.json(visit);
 });

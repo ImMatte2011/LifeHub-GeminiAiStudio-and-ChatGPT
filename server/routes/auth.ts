@@ -1,15 +1,26 @@
 import { Router } from 'express';
 import { db, verifyPassword, hashPassword, generateCryptoToken } from '../db/database.js';
+import { AuthenticatedRequest, requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
-// Current active session user
-let currentUserId = 'user_matteo';
-
 // Get Current Authenticated User & Permissions (/api/core/auth/me)
-router.get('/me', (req, res) => {
+router.get('/me', (req: AuthenticatedRequest, res) => {
   const multiUserEnabled = db.instanceConfig.settings?.multi_user_enabled ?? true;
-  const user = db.users.get(currentUserId);
+  
+  // Resolve user strictly from request context (populated by authenticateRequest middleware)
+  let user = req.user;
+
+  // Fallback: If no token was sent, resolve a sensible default based on multi-user setting
+  if (!user) {
+    if (!multiUserEnabled) {
+      user = Array.from(db.users.values()).find((u) => u.is_active && u.role_id === 'admin') ||
+        Array.from(db.users.values())[0];
+    } else {
+      // Default to the first active user for initial non-authenticated discovery
+      user = db.users.get('user_matteo') || Array.from(db.users.values())[0];
+    }
+  }
 
   if (!user) {
     return res.status(401).json({ error: 'Not authenticated' });
@@ -35,6 +46,7 @@ router.get('/me', (req, res) => {
     (rp) => rp.role_id === role.id && rp.allowed
   );
 
+  // Generate a valid signed token for this specific user
   const token = generateCryptoToken(user.id, user.username);
 
   return res.json({
@@ -50,7 +62,7 @@ router.get('/me', (req, res) => {
     },
     role,
     token,
-    auth_type: 'PBKDF2-HMAC-SHA256 (Real Cryptographic)',
+    auth_type: 'PBKDF2-HMAC-SHA256 (Per-Request Cryptographic Token)',
     permissions: permissions.map((p) => p.permission_key),
     multi_user_enabled: multiUserEnabled,
     all_users: Array.from(db.users.values()).map((u) => ({
@@ -82,7 +94,6 @@ router.post('/login', (req, res) => {
     return res.status(403).json({ error: 'User account has been deactivated' });
   }
 
-  currentUserId = user.id;
   user.last_login = new Date().toISOString();
   db.saveToDisk();
   db.logAudit(user.id, 'LOGIN', `User ${user.username} logged in successfully`);
@@ -99,23 +110,24 @@ router.post('/login', (req, res) => {
 });
 
 // Logout
-router.post('/logout', (req, res) => {
-  db.logAudit(currentUserId, 'LOGOUT', `User logged out`);
-  currentUserId = 'user_guest';
+router.post('/logout', (req: AuthenticatedRequest, res) => {
+  if (req.userId) {
+    db.logAudit(req.userId, 'LOGOUT', `User ${req.user?.username || req.userId} logged out`);
+  }
   return res.json({ success: true });
 });
 
-// Switch User (Useful for testing permissions & multi-user flows in UI)
+// Switch User (Generates a new token for the target user without mutating global state)
 router.post('/switch-user', (req, res) => {
   const { user_id } = req.body;
   const user = db.users.get(user_id);
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
-  currentUserId = user.id;
   db.logAudit(user.id, 'LOGIN', `Switched active session to user ${user.username}`);
   const token = generateCryptoToken(user.id, user.username);
-  return res.json({ success: true, user, token });
+  const { password_hash, ...safeUser } = user;
+  return res.json({ success: true, user: safeUser, token });
 });
 
 // Users Management (Admin)
@@ -127,7 +139,7 @@ router.get('/users', (req, res) => {
   return res.json(users);
 });
 
-router.post('/users', (req, res) => {
+router.post('/users', (req: AuthenticatedRequest, res) => {
   const { username, email, full_name, role_id, password } = req.body;
   if (!username || !email) {
     return res.status(400).json({ error: 'Username and email are required' });
@@ -147,13 +159,13 @@ router.post('/users', (req, res) => {
 
   db.users.set(id, newUser);
   db.saveToDisk();
-  db.logAudit(currentUserId, 'CREATE', `Created user account ${username}`, id, 'user');
+  db.logAudit(req.userId || 'user_admin', 'CREATE', `Created user account ${username}`, id, 'user');
 
   const { password_hash, ...rest } = newUser;
   return res.json(rest);
 });
 
-router.put('/users/:id', (req, res) => {
+router.put('/users/:id', (req: AuthenticatedRequest, res) => {
   const user = db.users.get(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -166,7 +178,7 @@ router.put('/users/:id', (req, res) => {
 
   db.saveToDisk();
   db.logAudit(
-    currentUserId,
+    req.userId || 'user_admin',
     'UPDATE',
     `Updated user ${user.username} (active: ${user.is_active}, role: ${user.role_id})`,
     user.id,

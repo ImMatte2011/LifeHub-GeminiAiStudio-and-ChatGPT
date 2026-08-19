@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
 import { PeoplePerson } from '../db/types.js';
+import { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -64,7 +65,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create Person
-router.post('/', (req, res) => {
+router.post('/', (req: AuthenticatedRequest, res) => {
   const {
     first_name,
     last_name,
@@ -87,9 +88,10 @@ router.post('/', (req, res) => {
 
   const id = 'person_' + Math.random().toString(36).substring(2, 9);
   const fullName = `${first_name} ${last_name || ''}`.trim();
+  const userId = req.userId || 'user_admin';
 
   // 1. Register into core.entities
-  db.registerEntity(id, 'person', fullName);
+  db.registerEntity(id, 'person', fullName, userId);
 
   // 2. Create in people.persons
   const person: PeoplePerson = {
@@ -138,7 +140,7 @@ router.post('/', (req, res) => {
     }
   }
 
-  db.logAudit('user_admin', 'CREATE', `Created Person: ${fullName}`, id, 'person');
+  db.logAudit(userId, 'CREATE', `Created Person: ${fullName}`, id, 'person');
 
   return res.json({
     ...person,
@@ -148,9 +150,10 @@ router.post('/', (req, res) => {
 });
 
 // Update Person
-router.put('/:id', (req, res) => {
+router.put('/:id', (req: AuthenticatedRequest, res) => {
   const person = db.people.get(req.params.id);
   if (!person) return res.status(404).json({ error: 'Person not found' });
+  const userId = req.userId || 'user_admin';
 
   const {
     first_name,
@@ -178,7 +181,7 @@ router.put('/:id', (req, res) => {
   if (notes !== undefined) person.notes = notes;
 
   const fullName = `${person.first_name} ${person.last_name || ''}`.trim();
-  db.registerEntity(person.id, 'person', fullName);
+  db.registerEntity(person.id, 'person', fullName, userId);
 
   // Update tags if provided
   if (Array.isArray(tags)) {
@@ -188,7 +191,7 @@ router.put('/:id', (req, res) => {
     }
   }
 
-  db.logAudit('user_admin', 'UPDATE', `Updated Person: ${fullName}`, person.id, 'person');
+  db.logAudit(userId, 'UPDATE', `Updated Person: ${fullName}`, person.id, 'person');
 
   return res.json({
     ...person,
@@ -197,9 +200,10 @@ router.put('/:id', (req, res) => {
 });
 
 // Delete Person
-router.delete('/:id', (req, res) => {
+router.delete('/:id', (req: AuthenticatedRequest, res) => {
   const person = db.people.get(req.params.id);
   if (!person) return res.status(404).json({ error: 'Person not found' });
+  const userId = req.userId || 'user_admin';
 
   db.deleteEntity(person.id);
   db.people.delete(person.id);
@@ -213,7 +217,7 @@ router.delete('/:id', (req, res) => {
   );
 
   db.logAudit(
-    'user_admin',
+    userId,
     'DELETE',
     `Deleted Person: ${person.first_name} ${person.last_name}`,
     person.id,

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
 import { SharedTag, SharedLink } from '../db/types.js';
+import { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -9,11 +10,13 @@ router.get('/tags', (req, res) => {
   return res.json(Array.from(db.tags.values()));
 });
 
-router.post('/tags', (req, res) => {
+router.post('/tags', (req: AuthenticatedRequest, res) => {
   const { name, color, icon } = req.body;
   if (!name) return res.status(400).json({ error: 'Tag name is required' });
 
   const id = 'tag_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const userId = req.userId || 'user_admin';
+
   const tag: SharedTag = {
     id,
     name,
@@ -22,13 +25,15 @@ router.post('/tags', (req, res) => {
   };
 
   db.tags.set(id, tag);
-  db.logAudit('user_admin', 'CREATE', `Created tag: ${name}`, id, 'tag');
+  db.logAudit(userId, 'CREATE', `Created tag: ${name}`, id, 'tag');
   return res.json(tag);
 });
 
-router.delete('/tags/:id', (req, res) => {
+router.delete('/tags/:id', (req: AuthenticatedRequest, res) => {
+  const userId = req.userId || 'user_admin';
   db.tags.delete(req.params.id);
   db.entityTags = db.entityTags.filter((et) => et.tag_id !== req.params.id);
+  db.logAudit(userId, 'DELETE', `Deleted tag: ${req.params.id}`, req.params.id, 'tag');
   return res.json({ success: true });
 });
 
@@ -60,20 +65,23 @@ router.get('/links/:entityId', (req, res) => {
   return res.json(db.getEntityLinks(req.params.entityId));
 });
 
-router.post('/links', (req, res) => {
+router.post('/links', (req: AuthenticatedRequest, res) => {
   const { source_entity_id, target_entity_id, link_type_id, notes } = req.body;
   if (!source_entity_id || !target_entity_id || !link_type_id) {
     return res.status(400).json({ error: 'source_entity_id, target_entity_id, and link_type_id are required' });
   }
 
+  const userId = req.userId || 'user_admin';
   const link = db.addLink(source_entity_id, target_entity_id, link_type_id, notes);
-  db.logAudit('user_admin', 'CREATE', `Linked entity ${source_entity_id} to ${target_entity_id}`, link.id, 'link');
+  db.logAudit(userId, 'CREATE', `Linked entity ${source_entity_id} to ${target_entity_id}`, link.id, 'link');
 
   return res.json(link);
 });
 
-router.delete('/links/:id', (req, res) => {
+router.delete('/links/:id', (req: AuthenticatedRequest, res) => {
+  const userId = req.userId || 'user_admin';
   db.links = db.links.filter((l) => l.id !== req.params.id);
+  db.logAudit(userId, 'DELETE', `Removed link ${req.params.id}`, req.params.id, 'link');
   return res.json({ success: true });
 });
 

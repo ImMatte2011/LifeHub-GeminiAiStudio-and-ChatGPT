@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 
+import { authenticateRequest } from './server/middleware/auth.js';
 import authRouter from './server/routes/auth.js';
 import coreRouter from './server/routes/core.js';
 import metaRouter from './server/routes/meta.js';
@@ -24,6 +25,9 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(express.text({ type: ['text/yaml', 'application/x-yaml', 'text/plain'] }));
+
+  // Global stateless per-request authentication middleware
+  app.use('/api', authenticateRequest);
 
   // API Routes
   app.use('/api/core/auth', authRouter);

@@ -5,6 +5,7 @@ import path from 'path';
 import { db } from '../db/database.js';
 import { InstanceConfigManager } from '../services/instanceConfig.js';
 import { ExtensionManager } from '../services/extensionManager.js';
+import { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -42,17 +43,18 @@ router.get('/modules', (req, res) => {
 });
 
 // Toggle module state
-router.post('/modules/:id/toggle', (req, res) => {
+router.post('/modules/:id/toggle', (req: AuthenticatedRequest, res) => {
   const { enabled } = req.body;
   const mod = db.modules.get(req.params.id);
   if (!mod) return res.status(404).json({ error: 'Module not found' });
+  const userId = req.userId || 'user_admin';
 
   mod.is_enabled = Boolean(enabled);
   db.instanceConfig.modules[mod.id] = mod.is_enabled;
   db.saveToDisk();
 
   db.logAudit(
-    'user_admin',
+    userId,
     'CONFIG_CHANGE',
     `Module ${mod.name} was ${mod.is_enabled ? 'enabled' : 'disabled'}`,
     mod.id,
@@ -67,10 +69,12 @@ router.get('/config', (req, res) => {
   return res.json(InstanceConfigManager.getConfig());
 });
 
-router.put('/config', (req, res) => {
+router.put('/config', (req: AuthenticatedRequest, res) => {
   try {
     const updated = InstanceConfigManager.applyConfig(req.body);
     db.saveToDisk();
+    const userId = req.userId || 'user_admin';
+    db.logAudit(userId, 'CONFIG_CHANGE', 'Updated instance configuration', 'config', 'core');
     return res.json(updated);
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
@@ -81,11 +85,13 @@ router.get('/config/yaml', (req, res) => {
   return res.type('text/yaml').send(InstanceConfigManager.getYaml());
 });
 
-router.post('/config/yaml', (req, res) => {
+router.post('/config/yaml', (req: AuthenticatedRequest, res) => {
   try {
     const yamlString = typeof req.body === 'string' ? req.body : req.body.yaml;
     const updated = InstanceConfigManager.applyConfig(yamlString);
     db.saveToDisk();
+    const userId = req.userId || 'user_admin';
+    db.logAudit(userId, 'CONFIG_CHANGE', 'Applied YAML configuration', 'config', 'core');
     return res.json(updated);
   } catch (err: any) {
     return res.status(400).json({ error: err.message });

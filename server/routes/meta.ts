@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
 import { MetaEntityType, MetaPropertyDefinition } from '../db/types.js';
+import { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -9,7 +10,7 @@ router.get('/entity-types', (req, res) => {
   return res.json(Array.from(db.entityTypes.values()));
 });
 
-router.post('/entity-types', (req, res) => {
+router.post('/entity-types', (req: AuthenticatedRequest, res) => {
   const { code, name, icon, description } = req.body;
   if (!code || !name) {
     return res.status(400).json({ error: 'Code and Name are required' });
@@ -19,6 +20,8 @@ router.post('/entity-types', (req, res) => {
   if (db.entityTypes.has(id)) {
     return res.status(400).json({ error: 'Entity type with this code already exists' });
   }
+
+  const userId = req.userId || 'user_admin';
 
   const newType: MetaEntityType = {
     id,
@@ -30,14 +33,15 @@ router.post('/entity-types', (req, res) => {
   };
 
   db.entityTypes.set(id, newType);
-  db.logAudit('user_admin', 'CREATE', `Created Meta Entity Type: ${name} (${code})`, id, 'meta_entity_type');
+  db.logAudit(userId, 'CREATE', `Created Meta Entity Type: ${name} (${code})`, id, 'meta_entity_type');
 
   return res.json(newType);
 });
 
-router.put('/entity-types/:id', (req, res) => {
+router.put('/entity-types/:id', (req: AuthenticatedRequest, res) => {
   const type = db.entityTypes.get(req.params.id);
   if (!type) return res.status(404).json({ error: 'Entity type not found' });
+  const userId = req.userId || 'user_admin';
 
   const { name, icon, description } = req.body;
   if (name) type.name = name;
@@ -45,7 +49,7 @@ router.put('/entity-types/:id', (req, res) => {
   if (description !== undefined) type.description = description;
   type.schema_version += 1;
 
-  db.logAudit('user_admin', 'UPDATE', `Updated Meta Entity Type: ${type.name}`, type.id, 'meta_entity_type');
+  db.logAudit(userId, 'UPDATE', `Updated Meta Entity Type: ${type.name}`, type.id, 'meta_entity_type');
   return res.json(type);
 });
 
@@ -60,7 +64,7 @@ router.get('/property-definitions', (req, res) => {
   return res.json(defs);
 });
 
-router.post('/property-definitions', (req, res) => {
+router.post('/property-definitions', (req: AuthenticatedRequest, res) => {
   const {
     entity_type_id,
     code,
@@ -77,6 +81,8 @@ router.post('/property-definitions', (req, res) => {
   }
 
   const id = 'pd_' + Math.random().toString(36).substring(2, 9);
+  const userId = req.userId || 'user_admin';
+
   const def: MetaPropertyDefinition = {
     id,
     entity_type_id,
@@ -91,7 +97,7 @@ router.post('/property-definitions', (req, res) => {
 
   db.propertyDefinitions.set(id, def);
   db.logAudit(
-    'user_admin',
+    userId,
     'CREATE',
     `Added property definition ${label} (${code}) to type ${entity_type_id}`,
     id,
@@ -101,12 +107,13 @@ router.post('/property-definitions', (req, res) => {
   return res.json(def);
 });
 
-router.delete('/property-definitions/:id', (req, res) => {
+router.delete('/property-definitions/:id', (req: AuthenticatedRequest, res) => {
   const def = db.propertyDefinitions.get(req.params.id);
   if (!def) return res.status(404).json({ error: 'Property definition not found' });
+  const userId = req.userId || 'user_admin';
 
   db.propertyDefinitions.delete(req.params.id);
-  db.logAudit('user_admin', 'DELETE', `Deleted property definition ${def.label}`, def.id, 'meta_property_definition');
+  db.logAudit(userId, 'DELETE', `Deleted property definition ${def.label}`, def.id, 'meta_property_definition');
   return res.json({ success: true });
 });
 

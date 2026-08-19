@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { ExtensionManager } from '../services/extensionManager.js';
+import { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -14,13 +15,14 @@ router.get('/diagnostics', (req, res) => {
 });
 
 // Toggle an extension
-router.post('/:code/toggle', (req, res) => {
+router.post('/:code/toggle', (req: AuthenticatedRequest, res) => {
   const { enabled } = req.body;
+  const userId = req.userId || 'user_admin';
   try {
     const updated = ExtensionManager.toggleExtension(
       req.params.code,
       Boolean(enabled),
-      'user_admin'
+      userId
     );
     return res.json({
       success: true,

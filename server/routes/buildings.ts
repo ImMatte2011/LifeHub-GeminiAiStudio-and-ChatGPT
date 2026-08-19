@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/database.js';
 import { BuildingsBuilding } from '../db/types.js';
 import { ExtensionManager } from '../services/extensionManager.js';
+import { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -49,7 +50,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create Building
-router.post('/', (req, res) => {
+router.post('/', (req: AuthenticatedRequest, res) => {
   const {
     name,
     code,
@@ -68,9 +69,10 @@ router.post('/', (req, res) => {
   }
 
   const id = 'bld_' + Math.random().toString(36).substring(2, 9);
+  const userId = req.userId || 'user_admin';
 
   // 1. Register into core.entities
-  db.registerEntity(id, 'building', `${name} (${code})`);
+  db.registerEntity(id, 'building', `${name} (${code})`, userId);
 
   // 2. Create in buildings.buildings
   const building: BuildingsBuilding = {
@@ -99,7 +101,7 @@ router.post('/', (req, res) => {
     db.addLink(id, manager_person_id, 'lt_manages', 'Building facility manager');
   }
 
-  db.logAudit('user_admin', 'CREATE', `Created Building Asset: ${name} [Phase 12 Reusability Demo]`, id, 'building');
+  db.logAudit(userId, 'CREATE', `Created Building Asset: ${name} [Phase 12 Reusability Demo]`, id, 'building');
 
   return res.json({
     ...building,
@@ -109,14 +111,15 @@ router.post('/', (req, res) => {
 });
 
 // Delete Building
-router.delete('/:id', (req, res) => {
+router.delete('/:id', (req: AuthenticatedRequest, res) => {
   const b = db.buildings.get(req.params.id);
   if (!b) return res.status(404).json({ error: 'Building not found' });
+  const userId = req.userId || 'user_admin';
 
   db.deleteEntity(b.id);
   db.buildings.delete(b.id);
 
-  db.logAudit('user_admin', 'DELETE', `Deleted Building: ${b.name}`, b.id, 'building');
+  db.logAudit(userId, 'DELETE', `Deleted Building: ${b.name}`, b.id, 'building');
 
   return res.json({ success: true });
 });

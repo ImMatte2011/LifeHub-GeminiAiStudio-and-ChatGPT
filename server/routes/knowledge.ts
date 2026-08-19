@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
 import { KnowledgeItem } from '../db/types.js';
+import { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -87,7 +88,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create Knowledge Item with Meta Layer Validation
-router.post('/', (req, res) => {
+router.post('/', (req: AuthenticatedRequest, res) => {
   const { entity_type_id, title, description, notes, properties = {}, tags } = req.body;
 
   if (!entity_type_id || !title) {
@@ -109,9 +110,10 @@ router.post('/', (req, res) => {
   }
 
   const id = 'know_' + Math.random().toString(36).substring(2, 9);
+  const userId = req.userId || 'user_admin';
 
   // 1. Register into core.entities
-  db.registerEntity(id, 'knowledge_item', title);
+  db.registerEntity(id, 'knowledge_item', title, userId);
 
   // 2. Create in knowledge.items
   const item: KnowledgeItem = {
@@ -131,7 +133,7 @@ router.post('/', (req, res) => {
     }
   }
 
-  db.logAudit('user_admin', 'CREATE', `Created Knowledge Item (${metaType.name}): ${title}`, id, 'knowledge_item');
+  db.logAudit(userId, 'CREATE', `Created Knowledge Item (${metaType.name}): ${title}`, id, 'knowledge_item');
 
   return res.json({
     ...item,
@@ -142,9 +144,10 @@ router.post('/', (req, res) => {
 });
 
 // Update Knowledge Item
-router.put('/:id', (req, res) => {
+router.put('/:id', (req: AuthenticatedRequest, res) => {
   const item = db.knowledgeItems.get(req.params.id);
   if (!item) return res.status(404).json({ error: 'Item not found' });
+  const userId = req.userId || 'user_admin';
 
   const { title, description, notes, properties, tags } = req.body;
 
@@ -163,7 +166,7 @@ router.put('/:id', (req, res) => {
     item.properties = properties;
   }
 
-  db.registerEntity(item.id, 'knowledge_item', item.title);
+  db.registerEntity(item.id, 'knowledge_item', item.title, userId);
 
   if (Array.isArray(tags)) {
     db.entityTags = db.entityTags.filter((et) => et.entity_id !== item.id);
@@ -172,7 +175,7 @@ router.put('/:id', (req, res) => {
     }
   }
 
-  db.logAudit('user_admin', 'UPDATE', `Updated Knowledge Item: ${item.title}`, item.id, 'knowledge_item');
+  db.logAudit(userId, 'UPDATE', `Updated Knowledge Item: ${item.title}`, item.id, 'knowledge_item');
 
   return res.json({
     ...item,
@@ -181,14 +184,15 @@ router.put('/:id', (req, res) => {
 });
 
 // Delete Knowledge Item
-router.delete('/:id', (req, res) => {
+router.delete('/:id', (req: AuthenticatedRequest, res) => {
   const item = db.knowledgeItems.get(req.params.id);
   if (!item) return res.status(404).json({ error: 'Item not found' });
+  const userId = req.userId || 'user_admin';
 
   db.deleteEntity(item.id);
   db.knowledgeItems.delete(item.id);
 
-  db.logAudit('user_admin', 'DELETE', `Deleted Knowledge Item: ${item.title}`, item.id, 'knowledge_item');
+  db.logAudit(userId, 'DELETE', `Deleted Knowledge Item: ${item.title}`, item.id, 'knowledge_item');
 
   return res.json({ success: true });
 });

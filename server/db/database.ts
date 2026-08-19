@@ -35,7 +35,6 @@ import {
 const DB_DATA_DIR = path.join(process.cwd(), 'data', 'database');
 const PRIMARY_DB_FILE = path.join(DB_DATA_DIR, 'lifehub_primary.json');
 const WAL_FILE = path.join(DB_DATA_DIR, 'wal.log');
-const SERVER_SECRET_KEY = process.env.LIFEHUB_SECRET_KEY || 'lifehub_crypto_master_secret_2026';
 
 // Ensure database data directory exists on disk
 if (!fs.existsSync(DB_DATA_DIR)) {
@@ -44,6 +43,34 @@ if (!fs.existsSync(DB_DATA_DIR)) {
   } catch (err) {
     console.error('[Database Engine] Failed to create data directory:', err);
   }
+}
+
+// ----------------------------------------------------------------------------------
+// Secure Secret Key Management (Env Variable or Auto-Generated Protected Key File)
+// ----------------------------------------------------------------------------------
+export function getOrCreateServerSecretKey(): string {
+  if (process.env.LIFEHUB_SECRET_KEY && process.env.LIFEHUB_SECRET_KEY.trim().length >= 16) {
+    return process.env.LIFEHUB_SECRET_KEY.trim();
+  }
+
+  const secretFilePath = path.join(DB_DATA_DIR, '.secret.key');
+  try {
+    if (fs.existsSync(secretFilePath)) {
+      const stored = fs.readFileSync(secretFilePath, 'utf-8').trim();
+      if (stored.length >= 32) return stored;
+    }
+    const generated = crypto.randomBytes(64).toString('hex');
+    fs.writeFileSync(secretFilePath, generated, { encoding: 'utf-8', mode: 0o600 });
+    return generated;
+  } catch {
+    return crypto.randomBytes(64).toString('hex');
+  }
+}
+
+const SERVER_SECRET_KEY = getOrCreateServerSecretKey();
+
+export function getSecretKey(): string {
+  return SERVER_SECRET_KEY;
 }
 
 // ----------------------------------------------------------------------------------

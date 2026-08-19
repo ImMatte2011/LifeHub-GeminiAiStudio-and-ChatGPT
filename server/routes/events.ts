@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
 import { EventsEvent, EventsParticipant } from '../db/types.js';
+import { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -80,7 +81,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create Event
-router.post('/', (req, res) => {
+router.post('/', (req: AuthenticatedRequest, res) => {
   const {
     title,
     description,
@@ -99,9 +100,10 @@ router.post('/', (req, res) => {
   }
 
   const id = 'event_' + Math.random().toString(36).substring(2, 9);
+  const userId = req.userId || 'user_admin';
 
   // 1. Register into core.entities
-  db.registerEntity(id, 'event', title);
+  db.registerEntity(id, 'event', title, userId);
 
   // 2. Create in events.events
   const event: EventsEvent = {
@@ -139,7 +141,7 @@ router.post('/', (req, res) => {
     }
   }
 
-  db.logAudit('user_admin', 'CREATE', `Created Event: ${title} on ${start_time}`, id, 'event');
+  db.logAudit(userId, 'CREATE', `Created Event: ${title} on ${start_time}`, id, 'event');
 
   return res.json({
     ...event,
@@ -149,9 +151,10 @@ router.post('/', (req, res) => {
 });
 
 // Update Event
-router.put('/:id', (req, res) => {
+router.put('/:id', (req: AuthenticatedRequest, res) => {
   const event = db.events.get(req.params.id);
   if (!event) return res.status(404).json({ error: 'Event not found' });
+  const userId = req.userId || 'user_admin';
 
   const {
     title,
@@ -174,7 +177,7 @@ router.put('/:id', (req, res) => {
   if (status) event.status = status;
   if (recurrence) event.recurrence = recurrence;
 
-  db.registerEntity(event.id, 'event', event.title);
+  db.registerEntity(event.id, 'event', event.title, userId);
 
   if (Array.isArray(tags)) {
     db.entityTags = db.entityTags.filter((et) => et.entity_id !== event.id);
@@ -183,7 +186,7 @@ router.put('/:id', (req, res) => {
     }
   }
 
-  db.logAudit('user_admin', 'UPDATE', `Updated Event: ${event.title}`, event.id, 'event');
+  db.logAudit(userId, 'UPDATE', `Updated Event: ${event.title}`, event.id, 'event');
 
   return res.json({
     ...event,
@@ -192,15 +195,16 @@ router.put('/:id', (req, res) => {
 });
 
 // Delete Event
-router.delete('/:id', (req, res) => {
+router.delete('/:id', (req: AuthenticatedRequest, res) => {
   const event = db.events.get(req.params.id);
   if (!event) return res.status(404).json({ error: 'Event not found' });
+  const userId = req.userId || 'user_admin';
 
   db.deleteEntity(event.id);
   db.events.delete(event.id);
   db.participants = db.participants.filter((p) => p.event_id !== event.id);
 
-  db.logAudit('user_admin', 'DELETE', `Deleted Event: ${event.title}`, event.id, 'event');
+  db.logAudit(userId, 'DELETE', `Deleted Event: ${event.title}`, event.id, 'event');
 
   return res.json({ success: true });
 });

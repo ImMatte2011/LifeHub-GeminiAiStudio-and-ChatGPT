@@ -1,0 +1,988 @@
+{
+  "version": "1.0.0",
+  "exported_at": "2026-08-18T15:48:05.378Z",
+  "instance_config": {
+    "instance": {
+      "name": "LifeHub",
+      "description": "Personal information platform for self-hosting",
+      "host_env": "Raspberry Pi 4 / Linux Host Node",
+      "version": "1.0.0-rc1"
+    },
+    "database": {
+      "engine": "cloud_sql",
+      "active_instance": "lifehub_main",
+      "local": {
+        "file_path": "/var/lib/lifehub/data.sqlite",
+        "auto_sync": true,
+        "backup_on_save": true,
+        "format": "sqlite"
+      },
+      "cloud_sql": {
+        "provider": "google_cloud_sql",
+        "region": "europe-west2",
+        "instance_id": "ai-studio-80c1662d",
+        "db_name": "lifehub_main",
+        "status": "connected"
+      }
+    },
+    "modules": {
+      "people": true,
+      "places": true,
+      "events": true,
+      "knowledge": true,
+      "buildings": false
+    },
+    "extensions": {
+      "maps": true,
+      "pg_trgm": true
+    },
+    "settings": {
+      "multi_user_enabled": true,
+      "default_role": "member",
+      "allow_registration": false,
+      "storage_quota_mb": 4096,
+      "language": "it"
+    }
+  },
+  "core": {
+    "users": [
+      {
+        "id": "user_admin",
+        "username": "admin",
+        "email": "admin@lifehub.local",
+        "password_hash": "pbkdf2$100000$3613c784c5ebb8778818135eb43111d9$082aac1a7e4cc47fc00a5e09712e5b6f21c3a9699bae1f0176201caef6bb1fc94b4b516145ef2f435a6dd1a830d85a38ab2461ebb19bf5e51bcd78b9842e0161",
+        "full_name": "System Administrator",
+        "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        "role_id": "admin",
+        "is_active": true,
+        "created_at": "2026-01-01T00:00:00.000Z",
+        "last_login": "2026-08-18T15:24:55.275Z"
+      },
+      {
+        "id": "user_matteo",
+        "username": "matteo",
+        "email": "al3ssandrini.m4tteo@gmail.com",
+        "password_hash": "pbkdf2$100000$92e79ed9fc9f988b600fcfcffe942a16$a3415307d2bfd8441aed0f8bd72975ecd4bb1d4aaa45e4f30cfa7b68715fa655facdd80f5324d2803bff2d73ac1f3eba40b593218710461a778c4a792b021d62",
+        "full_name": "Matteo Alessandrini",
+        "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+        "role_id": "admin",
+        "is_active": true,
+        "created_at": "2026-01-02T10:00:00.000Z",
+        "last_login": "2026-08-18T15:24:55.347Z"
+      },
+      {
+        "id": "user_guest",
+        "username": "guest_visitor",
+        "email": "guest@lifehub.local",
+        "password_hash": "pbkdf2$100000$6a7365d02ea2b322e4abc4e18323d56e$73e7c282371428cfba5fc64359a1241e7e6b923803a1fe1f03231f9f0422c445e7d097ced7d78cecb7a99de1dd51cadb0866f1405df7aae24d27fd93a42936a1",
+        "full_name": "Guest Reviewer",
+        "avatar_url": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
+        "role_id": "guest",
+        "is_active": true,
+        "created_at": "2026-02-01T12:00:00.000Z"
+      },
+      {
+        "id": "user_alice",
+        "username": "alice",
+        "email": "alice@lifehub.local",
+        "password_hash": "hash_alice",
+        "full_name": "Alice Developer",
+        "role_id": "user",
+        "is_active": true,
+        "created_at": "2026-08-18T15:48:05.355Z"
+      },
+      {
+        "id": "user_bob",
+        "username": "bob",
+        "email": "bob@lifehub.local",
+        "password_hash": "hash_bob",
+        "full_name": "Bob Manager",
+        "role_id": "editor",
+        "is_active": true,
+        "created_at": "2026-08-18T15:48:05.355Z"
+      },
+      {
+        "id": "user_charlie",
+        "username": "charlie",
+        "email": "charlie@lifehub.local",
+        "password_hash": "hash_charlie",
+        "full_name": "Charlie Test",
+        "role_id": "user",
+        "is_active": true,
+        "created_at": "2026-08-18T15:48:05.355Z"
+      },
+      {
+        "id": "user_regular",
+        "username": "regular",
+        "email": "reg@test.com",
+        "password_hash": "hash_reg",
+        "full_name": "Regular User",
+        "role_id": "user",
+        "is_active": true,
+        "created_at": "2026-08-18T15:48:05.355Z"
+      },
+      {
+        "id": "user_admin_test",
+        "username": "admin_test",
+        "email": "admin@test.com",
+        "password_hash": "hash_admin",
+        "full_name": "Admin User",
+        "role_id": "admin",
+        "is_active": true,
+        "created_at": "2026-08-18T15:48:05.355Z"
+      },
+      {
+        "id": "user_u1",
+        "username": "u1",
+        "email": "u1@test.com",
+        "password_hash": "hash_user_u1",
+        "full_name": "User 1",
+        "role_id": "user",
+        "is_active": true,
+        "created_at": "2026-08-18T15:48:05.358Z"
+      },
+      {
+        "id": "user_u2",
+        "username": "u2",
+        "email": "u2@test.com",
+        "password_hash": "hash_user_u2",
+        "full_name": "User 2",
+        "role_id": "editor",
+        "is_active": true,
+        "created_at": "2026-08-18T15:48:05.358Z"
+      },
+      {
+        "id": "user_u3",
+        "username": "u3",
+        "email": "u3@test.com",
+        "password_hash": "hash_user_u3",
+        "full_name": "User 3 (Admin)",
+        "role_id": "admin",
+        "is_active": true,
+        "created_at": "2026-08-18T15:48:05.358Z"
+      }
+    ],
+    "roles": [
+      {
+        "id": "admin",
+        "name": "Administrator",
+        "description": "Full system control, module configuration, user management and audit log access",
+        "is_admin": true
+      },
+      {
+        "id": "member",
+        "name": "Member",
+        "description": "Can create and edit entities across all enabled modules",
+        "is_admin": false
+      },
+      {
+        "id": "guest",
+        "name": "Guest (Read Only)",
+        "description": "Can view enabled modules and search items",
+        "is_admin": false
+      }
+    ],
+    "role_permissions": [],
+    "entities": [
+      {
+        "id": "person_matteo",
+        "entity_type": "person",
+        "title": "Matteo Alessandrini",
+        "created_at": "2026-08-18T15:24:55.419Z",
+        "updated_at": "2026-08-18T15:24:55.419Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "person_elena",
+        "entity_type": "person",
+        "title": "Elena Rossi",
+        "created_at": "2026-08-18T15:24:55.421Z",
+        "updated_at": "2026-08-18T15:24:55.421Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "person_marco",
+        "entity_type": "person",
+        "title": "Marco Bianchi",
+        "created_at": "2026-08-18T15:24:55.421Z",
+        "updated_at": "2026-08-18T15:24:55.421Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "place_home_lab",
+        "entity_type": "place",
+        "title": "Home Office & Pi Cluster Lab",
+        "created_at": "2026-08-18T15:24:55.422Z",
+        "updated_at": "2026-08-18T15:24:55.422Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "place_bologna_hq",
+        "entity_type": "place",
+        "title": "Tech Incubator HQ",
+        "created_at": "2026-08-18T15:24:55.423Z",
+        "updated_at": "2026-08-18T15:24:55.423Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "place_alp_retreat",
+        "entity_type": "place",
+        "title": "Dolomites Mountain Studio",
+        "created_at": "2026-08-18T15:24:55.423Z",
+        "updated_at": "2026-08-18T15:24:55.423Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "event_lifehub_launch",
+        "entity_type": "event",
+        "title": "LifeHub Architecture Review & Launch",
+        "created_at": "2026-08-18T15:24:55.424Z",
+        "updated_at": "2026-08-18T15:24:55.424Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "event_pi_cluster_upgrade",
+        "entity_type": "event",
+        "title": "Raspberry Pi Cluster SATA SSD Upgrade",
+        "created_at": "2026-08-18T15:24:55.425Z",
+        "updated_at": "2026-08-18T15:24:55.425Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "know_clean_arch",
+        "entity_type": "knowledge_item",
+        "title": "Clean Architecture: A Craftsman's Guide to Software Structure",
+        "created_at": "2026-08-18T15:24:55.426Z",
+        "updated_at": "2026-08-18T15:24:55.426Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "know_rpi4_sbc",
+        "entity_type": "knowledge_item",
+        "title": "Raspberry Pi 4 Model B (8GB RAM)",
+        "created_at": "2026-08-18T15:24:55.426Z",
+        "updated_at": "2026-08-18T15:24:55.426Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "know_carbonara",
+        "entity_type": "knowledge_item",
+        "title": "Authentic Roman Spaghetti alla Carbonara",
+        "created_at": "2026-08-18T15:24:55.427Z",
+        "updated_at": "2026-08-18T15:24:55.427Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "bld_server_facility",
+        "entity_type": "building",
+        "title": "LifeHub Primary Server Hub & Workshop",
+        "created_at": "2026-08-18T15:24:55.428Z",
+        "updated_at": "2026-08-18T15:24:55.428Z",
+        "created_by": "user_admin"
+      },
+      {
+        "id": "entity_test_1787067998322",
+        "entity_type": "test_item",
+        "title": "Test Item Title",
+        "created_at": "2026-08-18T15:46:38.322Z",
+        "updated_at": "2026-08-18T15:46:38.322Z",
+        "created_by": "user_audited_99"
+      },
+      {
+        "id": "entity_test_1787068037076",
+        "entity_type": "test_item",
+        "title": "Test Item Title",
+        "created_at": "2026-08-18T15:47:17.076Z",
+        "updated_at": "2026-08-18T15:47:17.076Z",
+        "created_by": "user_audited_99"
+      },
+      {
+        "id": "entity_test_1787068085378",
+        "entity_type": "test_item",
+        "title": "Test Item Title",
+        "created_at": "2026-08-18T15:48:05.378Z",
+        "updated_at": "2026-08-18T15:48:05.378Z",
+        "created_by": "user_audited_99"
+      }
+    ],
+    "modules": [
+      {
+        "id": "people",
+        "name": "People & Address Book",
+        "description": "Contacts, companies, relationships, and address book graph",
+        "icon": "Users",
+        "is_enabled": true,
+        "required_extensions": [],
+        "version": "1.0.0"
+      },
+      {
+        "id": "places",
+        "name": "Places & Geo Registry",
+        "description": "Geographical nodes, spatial coordinates, and interactive maps",
+        "icon": "MapPin",
+        "is_enabled": true,
+        "required_extensions": [
+          "maps"
+        ],
+        "version": "1.0.0"
+      },
+      {
+        "id": "events",
+        "name": "Events & Temporal Calendar",
+        "description": "Time schedule, participants, meetings, and calendar integration",
+        "icon": "Calendar",
+        "is_enabled": true,
+        "required_extensions": [],
+        "version": "1.0.0"
+      },
+      {
+        "id": "knowledge",
+        "name": "Knowledge Base & Meta Layer",
+        "description": "Dynamic schema item catalog (Books, Gear, Software, Recipes)",
+        "icon": "Layers",
+        "is_enabled": true,
+        "required_extensions": [
+          "pg_trgm"
+        ],
+        "version": "1.0.0"
+      },
+      {
+        "id": "buildings",
+        "name": "Buildings & Real Estate Assets",
+        "description": "Facility management, floors, and assigned managers (Phase 12 validation)",
+        "icon": "Building2",
+        "is_enabled": false,
+        "required_extensions": [
+          "maps"
+        ],
+        "version": "1.0.0"
+      }
+    ],
+    "audit_log": [
+      {
+        "id": "audit_f9a0ceee113d",
+        "user_id": "user_matteo",
+        "username": "matteo",
+        "action": "CREATE",
+        "entity_id": "know_clean_arch",
+        "entity_type": "knowledge_item",
+        "details": "Created Knowledge item: Clean Architecture",
+        "timestamp": "2026-08-18T15:24:55.429Z"
+      },
+      {
+        "id": "audit_e9cd7e3226f4",
+        "user_id": "user_matteo",
+        "username": "matteo",
+        "action": "CREATE",
+        "entity_id": "place_home_lab",
+        "entity_type": "place",
+        "details": "Created Place record: Home Office & Pi Cluster Lab",
+        "timestamp": "2026-08-18T15:24:55.429Z"
+      },
+      {
+        "id": "audit_447ac1c7b287",
+        "user_id": "user_matteo",
+        "username": "matteo",
+        "action": "CREATE",
+        "entity_id": "person_matteo",
+        "entity_type": "person",
+        "details": "Created Person record: Matteo Alessandrini",
+        "timestamp": "2026-08-18T15:24:55.429Z"
+      },
+      {
+        "id": "audit_d81f071d9762",
+        "user_id": "user_admin",
+        "username": "admin",
+        "action": "CONFIG_CHANGE",
+        "details": "LifeHub instance initialized with Core, Meta, and Shared layers active.",
+        "timestamp": "2026-08-18T15:24:55.429Z"
+      }
+    ]
+  },
+  "meta": {
+    "entity_types": [
+      {
+        "id": "metatype_book",
+        "name": "Book",
+        "code": "book",
+        "icon": "BookOpen",
+        "description": "Literature, manuals, and study guides with ISBN and rating",
+        "schema_version": 1
+      },
+      {
+        "id": "metatype_hardware_gear",
+        "name": "Hardware & Gear",
+        "code": "hardware_gear",
+        "icon": "Cpu",
+        "description": "Computing hardware, SBCs, tools, and electronics with serial numbers",
+        "schema_version": 1
+      },
+      {
+        "id": "metatype_software_app",
+        "name": "Software & Tools",
+        "code": "software_app",
+        "icon": "Code2",
+        "description": "Software repositories, desktop tools, and self-hosted docker images",
+        "schema_version": 1
+      },
+      {
+        "id": "metatype_recipe",
+        "name": "Culinary Recipe",
+        "code": "recipe",
+        "icon": "Utensils",
+        "description": "Cooking ingredients, steps, and preparation times",
+        "schema_version": 1
+      }
+    ],
+    "property_definitions": [
+      {
+        "id": "prop_book_author",
+        "entity_type_id": "metatype_book",
+        "code": "author",
+        "label": "Author",
+        "data_type": "string",
+        "is_required": true,
+        "sort_order": 1
+      },
+      {
+        "id": "prop_book_isbn",
+        "entity_type_id": "metatype_book",
+        "code": "isbn",
+        "label": "ISBN",
+        "data_type": "string",
+        "is_required": false,
+        "sort_order": 2
+      },
+      {
+        "id": "prop_book_rating",
+        "entity_type_id": "metatype_book",
+        "code": "rating",
+        "label": "Personal Rating (1-5)",
+        "data_type": "number",
+        "is_required": false,
+        "sort_order": 3
+      },
+      {
+        "id": "prop_hw_brand",
+        "entity_type_id": "metatype_hardware_gear",
+        "code": "brand",
+        "label": "Manufacturer / Brand",
+        "data_type": "string",
+        "is_required": true,
+        "sort_order": 1
+      },
+      {
+        "id": "prop_hw_serial",
+        "entity_type_id": "metatype_hardware_gear",
+        "code": "serial_number",
+        "label": "Serial Number",
+        "data_type": "string",
+        "is_required": false,
+        "sort_order": 2
+      },
+      {
+        "id": "prop_hw_location",
+        "entity_type_id": "metatype_hardware_gear",
+        "code": "physical_location",
+        "label": "Rack / Shelf Location",
+        "data_type": "string",
+        "is_required": false,
+        "sort_order": 3
+      }
+    ],
+    "property_groups": []
+  },
+  "shared": {
+    "tags": [
+      {
+        "id": "tag_tech",
+        "name": "Technology",
+        "color": "#3b82f6"
+      },
+      {
+        "id": "tag_hardware",
+        "name": "Hardware",
+        "color": "#10b981"
+      },
+      {
+        "id": "tag_work",
+        "name": "Work",
+        "color": "#8b5cf6"
+      },
+      {
+        "id": "tag_personal",
+        "name": "Personal",
+        "color": "#f59e0b"
+      },
+      {
+        "id": "tag_travel",
+        "name": "Travel",
+        "color": "#ec4899"
+      },
+      {
+        "id": "tag_urgent",
+        "name": "Urgent",
+        "color": "#ef4444"
+      },
+      {
+        "id": "tag_culinary",
+        "name": "Culinary",
+        "color": "#14b8a6"
+      }
+    ],
+    "entity_tags": [
+      {
+        "id": "et_b4ad85b386",
+        "entity_id": "person_matteo",
+        "tag_id": "tag_tech"
+      },
+      {
+        "id": "et_90372f0442",
+        "entity_id": "person_matteo",
+        "tag_id": "tag_work"
+      },
+      {
+        "id": "et_80851642c2",
+        "entity_id": "person_matteo",
+        "tag_id": "tag_hardware"
+      },
+      {
+        "id": "et_a6ce3815d5",
+        "entity_id": "person_elena",
+        "tag_id": "tag_work"
+      },
+      {
+        "id": "et_9c9a040249",
+        "entity_id": "person_elena",
+        "tag_id": "tag_tech"
+      },
+      {
+        "id": "et_d9827716cc",
+        "entity_id": "person_marco",
+        "tag_id": "tag_hardware"
+      },
+      {
+        "id": "et_af18654955",
+        "entity_id": "person_marco",
+        "tag_id": "tag_tech"
+      },
+      {
+        "id": "et_7ae3eef460",
+        "entity_id": "place_home_lab",
+        "tag_id": "tag_tech"
+      },
+      {
+        "id": "et_8b95a94bc0",
+        "entity_id": "place_home_lab",
+        "tag_id": "tag_hardware"
+      },
+      {
+        "id": "et_c849c6aabb",
+        "entity_id": "place_bologna_hq",
+        "tag_id": "tag_work"
+      },
+      {
+        "id": "et_e98077cd22",
+        "entity_id": "place_alp_retreat",
+        "tag_id": "tag_travel"
+      },
+      {
+        "id": "et_eaf3c805c4",
+        "entity_id": "place_alp_retreat",
+        "tag_id": "tag_personal"
+      },
+      {
+        "id": "et_b455d42b49",
+        "entity_id": "event_lifehub_launch",
+        "tag_id": "tag_tech"
+      },
+      {
+        "id": "et_ff6f25fa26",
+        "entity_id": "event_lifehub_launch",
+        "tag_id": "tag_work"
+      },
+      {
+        "id": "et_071ed04e38",
+        "entity_id": "event_lifehub_launch",
+        "tag_id": "tag_urgent"
+      },
+      {
+        "id": "et_748d79deff",
+        "entity_id": "event_pi_cluster_upgrade",
+        "tag_id": "tag_hardware"
+      },
+      {
+        "id": "et_852975ac31",
+        "entity_id": "event_pi_cluster_upgrade",
+        "tag_id": "tag_tech"
+      },
+      {
+        "id": "et_c2e514376b",
+        "entity_id": "know_clean_arch",
+        "tag_id": "tag_tech"
+      },
+      {
+        "id": "et_88d222921e",
+        "entity_id": "know_clean_arch",
+        "tag_id": "tag_work"
+      },
+      {
+        "id": "et_c36015f367",
+        "entity_id": "know_rpi4_sbc",
+        "tag_id": "tag_hardware"
+      },
+      {
+        "id": "et_1ed63257da",
+        "entity_id": "know_rpi4_sbc",
+        "tag_id": "tag_tech"
+      },
+      {
+        "id": "et_8c185356eb",
+        "entity_id": "know_carbonara",
+        "tag_id": "tag_culinary"
+      },
+      {
+        "id": "et_2a76c984a1",
+        "entity_id": "know_carbonara",
+        "tag_id": "tag_personal"
+      },
+      {
+        "id": "et_5e51c9a906",
+        "entity_id": "bld_server_facility",
+        "tag_id": "tag_hardware"
+      }
+    ],
+    "link_types": [
+      {
+        "id": "lt_related_to",
+        "code": "related_to",
+        "forward_label": "is related to",
+        "reverse_label": "is related to"
+      },
+      {
+        "id": "lt_works_at",
+        "code": "works_at",
+        "forward_label": "works at",
+        "reverse_label": "employs"
+      },
+      {
+        "id": "lt_located_at",
+        "code": "located_at",
+        "forward_label": "is located at",
+        "reverse_label": "hosts"
+      },
+      {
+        "id": "lt_participates_in",
+        "code": "participates_in",
+        "forward_label": "participates in",
+        "reverse_label": "has participant"
+      },
+      {
+        "id": "lt_manages",
+        "code": "manages",
+        "forward_label": "manages",
+        "reverse_label": "is managed by"
+      },
+      {
+        "id": "lt_owns",
+        "code": "owns",
+        "forward_label": "owns",
+        "reverse_label": "is owned by"
+      },
+      {
+        "id": "lt_friend_of",
+        "code": "friend_of",
+        "forward_label": "is friend of",
+        "reverse_label": "is friend of"
+      }
+    ],
+    "links": [
+      {
+        "id": "lnk_e7dffcff7cbe",
+        "source_entity_id": "person_matteo",
+        "target_entity_id": "know_clean_arch",
+        "link_type_id": "lt_related_to",
+        "notes": "Architectural reference for LifeHub Core design",
+        "created_at": "2026-08-18T15:24:55.428Z"
+      },
+      {
+        "id": "lnk_2cb0256a3120",
+        "source_entity_id": "person_matteo",
+        "target_entity_id": "place_home_lab",
+        "link_type_id": "lt_works_at",
+        "notes": "Primary workspace and lab",
+        "created_at": "2026-08-18T15:24:55.429Z"
+      },
+      {
+        "id": "lnk_fd75b4b52750",
+        "source_entity_id": "event_lifehub_launch",
+        "target_entity_id": "place_home_lab",
+        "link_type_id": "lt_located_at",
+        "notes": "Hosted in the primary lab",
+        "created_at": "2026-08-18T15:24:55.429Z"
+      },
+      {
+        "id": "lnk_a2fdb35bd0b6",
+        "source_entity_id": "bld_server_facility",
+        "target_entity_id": "person_matteo",
+        "link_type_id": "lt_manages",
+        "notes": "Managed by lead architect",
+        "created_at": "2026-08-18T15:24:55.429Z"
+      }
+    ],
+    "files": [],
+    "entity_files": []
+  },
+  "domain": {
+    "people": [
+      {
+        "id": "person_matteo",
+        "first_name": "Matteo",
+        "last_name": "Alessandrini",
+        "nickname": "Matteo",
+        "role_title": "Lead Software Architect",
+        "company": "LifeHub Core Project",
+        "bio": "Full-stack software architect specializing in distributed systems, PostgreSQL, and edge IoT self-hosting nodes.",
+        "notes": "Primary admin and system developer.",
+        "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80"
+      },
+      {
+        "id": "person_elena",
+        "first_name": "Elena",
+        "last_name": "Rossi",
+        "nickname": "Ele",
+        "role_title": "Senior Product Designer",
+        "company": "Nordic Studio",
+        "bio": "UI/UX specialist with 10 years experience in minimalist and accessible design systems.",
+        "notes": "Co-collaborator on design aesthetics and layout hierarchy.",
+        "avatar_url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80"
+      },
+      {
+        "id": "person_marco",
+        "first_name": "Marco",
+        "last_name": "Bianchi",
+        "role_title": "Embedded Systems Engineer",
+        "company": "Pi Industrial Labs",
+        "bio": "Hardware hacker and ARM kernel specialist. Builds custom Raspberry Pi compute module carrier boards.",
+        "notes": "Hardware consultant for Raspberry Pi 4 cluster nodes.",
+        "avatar_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80"
+      }
+    ],
+    "contacts": [
+      {
+        "id": "cnt_matteo_email",
+        "person_id": "person_matteo",
+        "type": "email",
+        "value": "al3ssandrini.m4tteo@gmail.com",
+        "label": "Primary",
+        "is_primary": true
+      },
+      {
+        "id": "cnt_matteo_github",
+        "person_id": "person_matteo",
+        "type": "website",
+        "value": "https://github.com/al3ssandrini",
+        "label": "GitHub",
+        "is_primary": false
+      },
+      {
+        "id": "cnt_elena_email",
+        "person_id": "person_elena",
+        "type": "email",
+        "value": "elena.rossi@nordicdesign.eu",
+        "label": "Work",
+        "is_primary": true
+      },
+      {
+        "id": "cnt_marco_phone",
+        "person_id": "person_marco",
+        "type": "phone",
+        "value": "+39 02 8934521",
+        "label": "Mobile",
+        "is_primary": true
+      }
+    ],
+    "relationships": [],
+    "places": [
+      {
+        "id": "place_home_lab",
+        "name": "Home Office & Pi Cluster Lab",
+        "category": "Facility",
+        "address": "Via delle Magnolie 14, Bologna, Italy",
+        "latitude": 44.4949,
+        "longitude": 11.3426,
+        "description": "Primary workspace housing the Raspberry Pi 4 cluster and local development testbed."
+      },
+      {
+        "id": "place_bologna_hq",
+        "name": "Tech Incubator HQ",
+        "category": "Work",
+        "address": "Via Rizzoli 28, Bologna, Italy",
+        "latitude": 44.4938,
+        "longitude": 11.3435,
+        "description": "Collaborative hub and meeting space for tech conferences and workshops."
+      },
+      {
+        "id": "place_alp_retreat",
+        "name": "Dolomites Mountain Studio",
+        "category": "Outdoors",
+        "address": "Strada del Sole 5, Cortina d'Ampezzo, Italy",
+        "latitude": 46.5405,
+        "longitude": 12.1357,
+        "description": "Quiet retreat for deep focus architecture sprints and outdoor trekking."
+      }
+    ],
+    "visits": [],
+    "events": [
+      {
+        "id": "event_lifehub_launch",
+        "title": "LifeHub Architecture Review & Launch",
+        "description": "Comprehensive review of the modular schema, PostgreSQL integration, and responsive frontend.",
+        "start_time": "2026-08-20T10:00:00.000Z",
+        "end_time": "2026-08-20T12:00:00.000Z",
+        "place_id": "place_home_lab",
+        "status": "planned",
+        "is_all_day": false
+      },
+      {
+        "id": "event_pi_cluster_upgrade",
+        "title": "Raspberry Pi Cluster SATA SSD Upgrade",
+        "description": "Migrating OS storage from MicroSD to dedicated UASP SATA III SSD for reliable 24/7 durability.",
+        "start_time": "2026-08-22T14:30:00.000Z",
+        "end_time": "2026-08-22T17:00:00.000Z",
+        "place_id": "place_home_lab",
+        "status": "planned",
+        "is_all_day": false
+      }
+    ],
+    "participants": [
+      {
+        "id": "part_ffaf3318f1",
+        "event_id": "event_lifehub_launch",
+        "person_id": "person_matteo",
+        "role": "attendee",
+        "status": "confirmed"
+      },
+      {
+        "id": "part_665f1c459c",
+        "event_id": "event_lifehub_launch",
+        "person_id": "person_elena",
+        "role": "attendee",
+        "status": "confirmed"
+      },
+      {
+        "id": "part_a16da168d0",
+        "event_id": "event_pi_cluster_upgrade",
+        "person_id": "person_matteo",
+        "role": "attendee",
+        "status": "confirmed"
+      },
+      {
+        "id": "part_5690c5c6b3",
+        "event_id": "event_pi_cluster_upgrade",
+        "person_id": "person_marco",
+        "role": "attendee",
+        "status": "confirmed"
+      }
+    ],
+    "knowledge_items": [
+      {
+        "id": "know_clean_arch",
+        "entity_type_id": "metatype_book",
+        "title": "Clean Architecture: A Craftsman's Guide to Software Structure",
+        "description": "Fundamental rules of software structure and domain boundaries by Robert C. Martin.",
+        "notes": "Emphasizes separation of concerns, entity isolation, and dependency inversion principles.",
+        "properties": {
+          "author": "Robert C. Martin (Uncle Bob)",
+          "isbn": "978-0134494166",
+          "rating": 5,
+          "pages": 432,
+          "language": "English"
+        }
+      },
+      {
+        "id": "know_rpi4_sbc",
+        "entity_type_id": "metatype_hardware_gear",
+        "title": "Raspberry Pi 4 Model B (8GB RAM)",
+        "description": "High-performance single board computer used as primary LifeHub edge server.",
+        "notes": "Booted via USB 3.0 UASP SATA SSD with active copper heatsink and 5V silent cooling fan.",
+        "properties": {
+          "brand": "Raspberry Pi Foundation",
+          "serial_number": "RPI4B-8GB-SN89410",
+          "physical_location": "Home Lab Rack #1 / Shelf A",
+          "power_consumption_watts": 6.5
+        }
+      },
+      {
+        "id": "know_carbonara",
+        "entity_type_id": "metatype_recipe",
+        "title": "Authentic Roman Spaghetti alla Carbonara",
+        "description": "Traditional recipe using Guanciale, fresh egg yolks, Pecorino Romano DOP, and freshly ground black pepper.",
+        "notes": "Strict rule: absolutely no cream, milk, or garlic. Emulsify pasta water with eggs off the heat.",
+        "properties": {
+          "prep_time_minutes": 10,
+          "cook_time_minutes": 15,
+          "servings": 4,
+          "difficulty": "Medium",
+          "ingredients_summary": "400g Spaghetti (bronze cut), 200g Guanciale di Amatrice, 4 egg yolks + 1 whole egg, 100g Pecorino Romano DOP, tellicherry black pepper."
+        }
+      }
+    ],
+    "buildings": [
+      {
+        "id": "bld_server_facility",
+        "name": "LifeHub Primary Server Hub & Workshop",
+        "code": "HUB-B14",
+        "building_type": "Server Room",
+        "address": "Via delle Magnolie 14, Bologna",
+        "place_id": "place_home_lab",
+        "manager_person_id": "person_matteo",
+        "floors_count": 2,
+        "total_area_sqm": 140,
+        "notes": "Dedicated solar-backed 24V UPS power supply for continuous 365-day operation."
+      }
+    ]
+  },
+  "extensions": [
+    {
+      "id": "ext_postgis",
+      "code": "maps",
+      "name": "PostGIS Spatial Engine",
+      "type": "atomic",
+      "description": "Enables spatial queries, geographic indexing, and interactive mapping features.",
+      "is_enabled": true,
+      "version": "3.4.1",
+      "status": "active"
+    },
+    {
+      "id": "ext_pg_trgm",
+      "code": "pg_trgm",
+      "name": "pg_trgm Full-Text & Fuzzy Search",
+      "type": "atomic",
+      "description": "Trigram fuzzy text search across all notes, contact profiles, and knowledge properties.",
+      "is_enabled": true,
+      "version": "1.6",
+      "status": "active"
+    },
+    {
+      "id": "ext_timescale",
+      "code": "timescale",
+      "name": "TimescaleDB Temporal Series",
+      "type": "atomic",
+      "description": "Optimized time-series database chunks for IoT sensor telemetry and health tracking.",
+      "is_enabled": false,
+      "version": "2.14.0",
+      "status": "disabled"
+    },
+    {
+      "id": "ext_pgvector",
+      "code": "pgvector",
+      "name": "pgvector Semantic Embeddings",
+      "type": "atomic",
+      "description": "Vector similarity search for local AI semantic second brain retrieval.",
+      "is_enabled": false,
+      "version": "0.6.0",
+      "status": "disabled"
+    }
+  ]
+}
