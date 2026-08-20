@@ -30,8 +30,18 @@ import {
 } from './memory/MemoryRepository.js';
 import {
   PostgresUserRepository,
+  PostgresRoleRepository,
   PostgresEntityRepository,
+  PostgresMetaRepository,
+  PostgresSharedRepository,
+  PostgresPeopleRepository,
+  PostgresPlacesRepository,
+  PostgresEventsRepository,
+  PostgresKnowledgeRepository,
+  PostgresBuildingsRepository,
   PostgresAuditRepository,
+  PostgresSettingsRepository,
+  PostgresExtensionsRepository,
 } from './postgres/PostgresRepository.js';
 import { db as inMemoryDb } from '../db/database.js';
 
@@ -57,20 +67,35 @@ export class RepositoryManager {
   constructor(driver: PersistenceDriver = 'memory') {
     this.driver = driver;
 
-    // Initialize default memory adapters referencing the single database instance
-    this.users = driver === 'postgres' ? new PostgresUserRepository() : new MemoryUserRepository(inMemoryDb);
-    this.roles = new MemoryRoleRepository(inMemoryDb);
-    this.entities = driver === 'postgres' ? new PostgresEntityRepository() : new MemoryEntityRepository(inMemoryDb);
-    this.meta = new MemoryMetaRepository(inMemoryDb);
-    this.shared = new MemorySharedRepository(inMemoryDb);
-    this.people = new MemoryPeopleRepository(inMemoryDb);
-    this.places = new MemoryPlacesRepository(inMemoryDb);
-    this.events = new MemoryEventsRepository(inMemoryDb);
-    this.knowledge = new MemoryKnowledgeRepository(inMemoryDb);
-    this.buildings = new MemoryBuildingsRepository(inMemoryDb);
-    this.audit = driver === 'postgres' ? new PostgresAuditRepository() : new MemoryAuditRepository(inMemoryDb);
-    this.settings = new MemorySettingsRepository(inMemoryDb);
-    this.extensions = new MemoryExtensionsRepository(inMemoryDb);
+    if (driver === 'postgres') {
+      this.users = new PostgresUserRepository();
+      this.roles = new PostgresRoleRepository();
+      this.entities = new PostgresEntityRepository();
+      this.meta = new PostgresMetaRepository();
+      this.shared = new PostgresSharedRepository();
+      this.people = new PostgresPeopleRepository();
+      this.places = new PostgresPlacesRepository();
+      this.events = new PostgresEventsRepository();
+      this.knowledge = new PostgresKnowledgeRepository();
+      this.buildings = new PostgresBuildingsRepository();
+      this.audit = new PostgresAuditRepository();
+      this.settings = new PostgresSettingsRepository();
+      this.extensions = new PostgresExtensionsRepository();
+    } else {
+      this.users = new MemoryUserRepository(inMemoryDb);
+      this.roles = new MemoryRoleRepository(inMemoryDb);
+      this.entities = new MemoryEntityRepository(inMemoryDb);
+      this.meta = new MemoryMetaRepository(inMemoryDb);
+      this.shared = new MemorySharedRepository(inMemoryDb);
+      this.people = new MemoryPeopleRepository(inMemoryDb);
+      this.places = new MemoryPlacesRepository(inMemoryDb);
+      this.events = new MemoryEventsRepository(inMemoryDb);
+      this.knowledge = new MemoryKnowledgeRepository(inMemoryDb);
+      this.buildings = new MemoryBuildingsRepository(inMemoryDb);
+      this.audit = new MemoryAuditRepository(inMemoryDb);
+      this.settings = new MemorySettingsRepository(inMemoryDb);
+      this.extensions = new MemoryExtensionsRepository(inMemoryDb);
+    }
   }
 
   public getActiveDriver(): PersistenceDriver {

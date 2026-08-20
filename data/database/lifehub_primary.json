@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "exported_at": "2026-08-20T08:55:06.761Z",
+  "exported_at": "2026-08-20T09:17:40.519Z",
   "instance_config": {
     "instance": {
       "name": "LifeHub",
@@ -50,31 +50,31 @@
         "id": "user_admin",
         "username": "admin",
         "email": "admin@lifehub.local",
-        "password_hash": "pbkdf2$220000$e228b602f6bba4b199805ea50889e202$98f3f2d119f2eef6aea6f43b342003e2515eb5da2efd319a45aaf345ab98a6444b25b0ce3b077f12f08a0585fa8e1f9faf3c2728c8aec859a82acebb146aa256",
+        "password_hash": "pbkdf2$220000$419268dfc7307b728c88f87007892023$3d03926c9a57ef13a7a14d3da5b55e60fcedc9e33895277b8e8474dc5c43cf79df911f0f0fe9f0b11f43bd4b493d3b130f6d03e7c1fee10062a02269457b573f",
         "full_name": "System Administrator",
         "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
         "role_id": "admin",
         "is_active": true,
         "created_at": "2026-01-01T00:00:00.000Z",
-        "last_login": "2026-08-20T08:55:06.433Z"
+        "last_login": "2026-08-20T09:17:40.214Z"
       },
       {
         "id": "user_matteo",
         "username": "matteo",
         "email": "al3ssandrini.m4tteo@gmail.com",
-        "password_hash": "pbkdf2$220000$f77d9db1de3bd033b09f7cb7a91721b9$6118c0a2b7f520e68c8bfd8462d9eb27307c09ab83973f81dec5029b5f91a3cc291e5ce5403e5dd970aa561894e7915cecd4ea4a9ed499906069ed8de80db2e4",
+        "password_hash": "pbkdf2$220000$3475d68e06e7729d28790685199985d4$66a627623ff685d2a6a0ab6c16e9009c26826c26fe9497cb79ab5e8266adcc49d44ca3086ed822284e0c05479e6ed50e3207c4782a7d1130ac5f2e9919a0f5bf",
         "full_name": "Matteo Alessandrini",
         "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
         "role_id": "admin",
         "is_active": true,
         "created_at": "2026-01-02T10:00:00.000Z",
-        "last_login": "2026-08-20T08:55:06.585Z"
+        "last_login": "2026-08-20T09:17:40.362Z"
       },
       {
         "id": "user_guest",
         "username": "guest_visitor",
         "email": "guest@lifehub.local",
-        "password_hash": "pbkdf2$220000$51016420e60dd72cf2afaf7b368a352a$08d0f0b4071d58e30107bfa9d8c943187a563fec718278296a474283ff5cd851bd4a24b3b04712123cc329244e6000bc946e0e97a46689ed66972d8ace5331ea",
+        "password_hash": "pbkdf2$220000$b16937479794e7f2bd73948fca7c6761$0a9ab943b5faf3713b908101e8dc02d701439e4019b1e02c0382413f73ae8e23c9a5c5054b1bc0124ca08d42da7e5a90ed0058f8f730b91f396aed97ef822ff7",
         "full_name": "Guest Reviewer",
         "avatar_url": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
         "role_id": "guest",
@@ -109,7 +109,7 @@
         "entity_type": "person",
         "title": "Matteo Alessandrini",
         "created_at": "2026-08-18T15:24:55.419Z",
-        "updated_at": "2026-08-20T08:55:06.755Z",
+        "updated_at": "2026-08-20T09:17:40.511Z",
         "created_by": "user_admin"
       },
       {
@@ -117,7 +117,7 @@
         "entity_type": "person",
         "title": "Elena Rossi",
         "created_at": "2026-08-18T15:24:55.421Z",
-        "updated_at": "2026-08-20T08:55:06.755Z",
+        "updated_at": "2026-08-20T09:17:40.512Z",
         "created_by": "user_admin"
       },
       {
@@ -125,7 +125,7 @@
         "entity_type": "person",
         "title": "Marco Bianchi",
         "created_at": "2026-08-18T15:24:55.421Z",
-        "updated_at": "2026-08-20T08:55:06.756Z",
+        "updated_at": "2026-08-20T09:17:40.513Z",
         "created_by": "user_admin"
       },
       {
@@ -133,7 +133,7 @@
         "entity_type": "place",
         "title": "Home Office & Pi Cluster Lab",
         "created_at": "2026-08-18T15:24:55.422Z",
-        "updated_at": "2026-08-20T08:55:06.756Z",
+        "updated_at": "2026-08-20T09:17:40.513Z",
         "created_by": "user_admin"
       },
       {
@@ -141,7 +141,7 @@
         "entity_type": "place",
         "title": "Tech Incubator HQ",
         "created_at": "2026-08-18T15:24:55.423Z",
-        "updated_at": "2026-08-20T08:55:06.756Z",
+        "updated_at": "2026-08-20T09:17:40.514Z",
         "created_by": "user_admin"
       },
       {
@@ -149,7 +149,7 @@
         "entity_type": "place",
         "title": "Dolomites Mountain Studio",
         "created_at": "2026-08-18T15:24:55.423Z",
-        "updated_at": "2026-08-20T08:55:06.757Z",
+        "updated_at": "2026-08-20T09:17:40.515Z",
         "created_by": "user_admin"
       },
       {
@@ -157,7 +157,7 @@
         "entity_type": "event",
         "title": "LifeHub Architecture Review & Launch",
         "created_at": "2026-08-18T15:24:55.424Z",
-        "updated_at": "2026-08-20T08:55:06.757Z",
+        "updated_at": "2026-08-20T09:17:40.515Z",
         "created_by": "user_admin"
       },
       {
@@ -165,7 +165,7 @@
         "entity_type": "event",
         "title": "Raspberry Pi Cluster SATA SSD Upgrade",
         "created_at": "2026-08-18T15:24:55.425Z",
-        "updated_at": "2026-08-20T08:55:06.758Z",
+        "updated_at": "2026-08-20T09:17:40.515Z",
         "created_by": "user_admin"
       },
       {
@@ -173,7 +173,7 @@
         "entity_type": "knowledge_item",
         "title": "Clean Architecture: A Craftsman's Guide to Software Structure",
         "created_at": "2026-08-18T15:24:55.426Z",
-        "updated_at": "2026-08-20T08:55:06.758Z",
+        "updated_at": "2026-08-20T09:17:40.516Z",
         "created_by": "user_admin"
       },
       {
@@ -181,7 +181,7 @@
         "entity_type": "knowledge_item",
         "title": "Raspberry Pi 4 Model B (8GB RAM)",
         "created_at": "2026-08-18T15:24:55.426Z",
-        "updated_at": "2026-08-20T08:55:06.758Z",
+        "updated_at": "2026-08-20T09:17:40.516Z",
         "created_by": "user_admin"
       },
       {
@@ -189,7 +189,7 @@
         "entity_type": "knowledge_item",
         "title": "Authentic Roman Spaghetti alla Carbonara",
         "created_at": "2026-08-18T15:24:55.427Z",
-        "updated_at": "2026-08-20T08:55:06.759Z",
+        "updated_at": "2026-08-20T09:17:40.517Z",
         "created_by": "user_admin"
       },
       {
@@ -197,7 +197,7 @@
         "entity_type": "building",
         "title": "LifeHub Primary Server Hub & Workshop",
         "created_at": "2026-08-18T15:24:55.428Z",
-        "updated_at": "2026-08-20T08:55:06.759Z",
+        "updated_at": "2026-08-20T09:17:40.517Z",
         "created_by": "user_admin"
       },
       {
@@ -271,6 +271,22 @@
         "created_at": "2026-08-20T08:55:05.639Z",
         "updated_at": "2026-08-20T08:55:05.639Z",
         "created_by": "user_audited_99"
+      },
+      {
+        "id": "entity_test_1787217434116",
+        "entity_type": "test_item",
+        "title": "Test Item Title",
+        "created_at": "2026-08-20T09:17:14.117Z",
+        "updated_at": "2026-08-20T09:17:14.117Z",
+        "created_by": "user_audited_99"
+      },
+      {
+        "id": "entity_test_1787217459447",
+        "entity_type": "test_item",
+        "title": "Test Item Title",
+        "created_at": "2026-08-20T09:17:39.447Z",
+        "updated_at": "2026-08-20T09:17:39.447Z",
+        "created_by": "user_audited_99"
       }
     ],
     "modules": [
@@ -327,6 +343,102 @@
       }
     ],
     "audit_log": [
+      {
+        "id": "audit_d1fc10a2dd71",
+        "user_id": "user_matteo",
+        "username": "matteo",
+        "action": "CREATE",
+        "entity_id": "know_clean_arch",
+        "entity_type": "knowledge_item",
+        "details": "Created Knowledge item: Clean Architecture",
+        "timestamp": "2026-08-20T09:17:40.519Z"
+      },
+      {
+        "id": "audit_e0622fafa7db",
+        "user_id": "user_matteo",
+        "username": "matteo",
+        "action": "CREATE",
+        "entity_id": "place_home_lab",
+        "entity_type": "place",
+        "details": "Created Place record: Home Office & Pi Cluster Lab",
+        "timestamp": "2026-08-20T09:17:40.519Z"
+      },
+      {
+        "id": "audit_0442b3dcd775",
+        "user_id": "user_matteo",
+        "username": "matteo",
+        "action": "CREATE",
+        "entity_id": "person_matteo",
+        "entity_type": "person",
+        "details": "Created Person record: Matteo Alessandrini",
+        "timestamp": "2026-08-20T09:17:40.519Z"
+      },
+      {
+        "id": "audit_15a09630a29b",
+        "user_id": "user_admin",
+        "username": "admin",
+        "action": "CONFIG_CHANGE",
+        "details": "LifeHub instance initialized with Core, Meta, and Shared layers active.",
+        "timestamp": "2026-08-20T09:17:40.519Z"
+      },
+      {
+        "id": "audit_e87f936da948",
+        "user_id": "user_audited_99",
+        "username": "system",
+        "action": "CREATE",
+        "entity_id": "entity_test_1787217459447",
+        "entity_type": "test_item",
+        "details": "Created test item",
+        "timestamp": "2026-08-20T09:17:39.448Z"
+      },
+      {
+        "id": "audit_9d4873b8db89",
+        "user_id": "user_matteo",
+        "username": "matteo",
+        "action": "CREATE",
+        "entity_id": "know_clean_arch",
+        "entity_type": "knowledge_item",
+        "details": "Created Knowledge item: Clean Architecture",
+        "timestamp": "2026-08-20T09:17:15.180Z"
+      },
+      {
+        "id": "audit_acae5187d3db",
+        "user_id": "user_matteo",
+        "username": "matteo",
+        "action": "CREATE",
+        "entity_id": "place_home_lab",
+        "entity_type": "place",
+        "details": "Created Place record: Home Office & Pi Cluster Lab",
+        "timestamp": "2026-08-20T09:17:15.180Z"
+      },
+      {
+        "id": "audit_d8c498609252",
+        "user_id": "user_matteo",
+        "username": "matteo",
+        "action": "CREATE",
+        "entity_id": "person_matteo",
+        "entity_type": "person",
+        "details": "Created Person record: Matteo Alessandrini",
+        "timestamp": "2026-08-20T09:17:15.180Z"
+      },
+      {
+        "id": "audit_5032ac265e95",
+        "user_id": "user_admin",
+        "username": "admin",
+        "action": "CONFIG_CHANGE",
+        "details": "LifeHub instance initialized with Core, Meta, and Shared layers active.",
+        "timestamp": "2026-08-20T09:17:15.180Z"
+      },
+      {
+        "id": "audit_29f23587a415",
+        "user_id": "user_audited_99",
+        "username": "system",
+        "action": "CREATE",
+        "entity_id": "entity_test_1787217434116",
+        "entity_type": "test_item",
+        "details": "Created test item",
+        "timestamp": "2026-08-20T09:17:14.118Z"
+      },
       {
         "id": "audit_13e98c500e3b",
         "user_id": "user_matteo",
@@ -936,6 +1048,70 @@
         "link_type_id": "lt_manages",
         "notes": "Managed by lead architect",
         "created_at": "2026-08-20T08:55:06.760Z"
+      },
+      {
+        "id": "lnk_20511251ab90",
+        "source_entity_id": "person_matteo",
+        "target_entity_id": "know_clean_arch",
+        "link_type_id": "lt_related_to",
+        "notes": "Architectural reference for LifeHub Core design",
+        "created_at": "2026-08-20T09:17:15.178Z"
+      },
+      {
+        "id": "lnk_6aa0670166c4",
+        "source_entity_id": "person_matteo",
+        "target_entity_id": "place_home_lab",
+        "link_type_id": "lt_works_at",
+        "notes": "Primary workspace and lab",
+        "created_at": "2026-08-20T09:17:15.179Z"
+      },
+      {
+        "id": "lnk_9abd784b887b",
+        "source_entity_id": "event_lifehub_launch",
+        "target_entity_id": "place_home_lab",
+        "link_type_id": "lt_located_at",
+        "notes": "Hosted in the primary lab",
+        "created_at": "2026-08-20T09:17:15.179Z"
+      },
+      {
+        "id": "lnk_4381550f9087",
+        "source_entity_id": "bld_server_facility",
+        "target_entity_id": "person_matteo",
+        "link_type_id": "lt_manages",
+        "notes": "Managed by lead architect",
+        "created_at": "2026-08-20T09:17:15.179Z"
+      },
+      {
+        "id": "lnk_67d6e203807a",
+        "source_entity_id": "person_matteo",
+        "target_entity_id": "know_clean_arch",
+        "link_type_id": "lt_related_to",
+        "notes": "Architectural reference for LifeHub Core design",
+        "created_at": "2026-08-20T09:17:40.517Z"
+      },
+      {
+        "id": "lnk_dff9afc08421",
+        "source_entity_id": "person_matteo",
+        "target_entity_id": "place_home_lab",
+        "link_type_id": "lt_works_at",
+        "notes": "Primary workspace and lab",
+        "created_at": "2026-08-20T09:17:40.518Z"
+      },
+      {
+        "id": "lnk_1f96c4b0e3e2",
+        "source_entity_id": "event_lifehub_launch",
+        "target_entity_id": "place_home_lab",
+        "link_type_id": "lt_located_at",
+        "notes": "Hosted in the primary lab",
+        "created_at": "2026-08-20T09:17:40.518Z"
+      },
+      {
+        "id": "lnk_ffd9e955431f",
+        "source_entity_id": "bld_server_facility",
+        "target_entity_id": "person_matteo",
+        "link_type_id": "lt_manages",
+        "notes": "Managed by lead architect",
+        "created_at": "2026-08-20T09:17:40.518Z"
       }
     ],
     "files": [],
@@ -1171,6 +1347,62 @@
       },
       {
         "id": "part_3e3a3519cd",
+        "event_id": "event_pi_cluster_upgrade",
+        "person_id": "person_marco",
+        "role": "attendee",
+        "status": "confirmed"
+      },
+      {
+        "id": "part_858d7b21e6",
+        "event_id": "event_lifehub_launch",
+        "person_id": "person_matteo",
+        "role": "attendee",
+        "status": "confirmed"
+      },
+      {
+        "id": "part_a513f91081",
+        "event_id": "event_lifehub_launch",
+        "person_id": "person_elena",
+        "role": "attendee",
+        "status": "confirmed"
+      },
+      {
+        "id": "part_e1893d6305",
+        "event_id": "event_pi_cluster_upgrade",
+        "person_id": "person_matteo",
+        "role": "attendee",
+        "status": "confirmed"
+      },
+      {
+        "id": "part_8edfb781af",
+        "event_id": "event_pi_cluster_upgrade",
+        "person_id": "person_marco",
+        "role": "attendee",
+        "status": "confirmed"
+      },
+      {
+        "id": "part_747b3e00be",
+        "event_id": "event_lifehub_launch",
+        "person_id": "person_matteo",
+        "role": "attendee",
+        "status": "confirmed"
+      },
+      {
+        "id": "part_9a2fd79fcd",
+        "event_id": "event_lifehub_launch",
+        "person_id": "person_elena",
+        "role": "attendee",
+        "status": "confirmed"
+      },
+      {
+        "id": "part_05d1905433",
+        "event_id": "event_pi_cluster_upgrade",
+        "person_id": "person_matteo",
+        "role": "attendee",
+        "status": "confirmed"
+      },
+      {
+        "id": "part_4dde3226d1",
         "event_id": "event_pi_cluster_upgrade",
         "person_id": "person_marco",
         "role": "attendee",
