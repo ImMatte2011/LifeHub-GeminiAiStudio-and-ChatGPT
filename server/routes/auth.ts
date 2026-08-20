@@ -1,8 +1,90 @@
 import { Router } from 'express';
-import { db, verifyPassword, hashPassword, generateCryptoToken } from '../db/database.js';
+import {
+  db,
+  verifyPassword,
+  hashPassword,
+  generateCryptoToken,
+  isDemoSeedEnabled,
+  needsRehash,
+  getPbkdf2Iterations,
+} from '../db/database.js';
 import { AuthenticatedRequest, requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
+
+// System Auth Status & Setup Requirement Check (/api/core/auth/status)
+router.get('/status', (req, res) => {
+  const hasAdmin = Array.from(db.users.values()).some((u) => u.role_id === 'admin' && u.is_active);
+  const hasUsers = db.users.size > 0;
+  const demoMode = isDemoSeedEnabled();
+  const demoUsers = demoMode
+    ? Array.from(db.users.values())
+        .filter((u) => ['admin', 'matteo', 'guest_visitor'].includes(u.username))
+        .map((u) => ({
+          id: u.id,
+          username: u.username,
+          full_name: u.full_name,
+          role_id: u.role_id,
+        }))
+    : [];
+
+  return res.json({
+    setup_required: !hasAdmin,
+    demo_mode: demoMode,
+    has_users: hasUsers,
+    demo_users: demoUsers,
+    multi_user_enabled: db.instanceConfig.settings?.multi_user_enabled ?? true,
+  });
+});
+
+// Setup Initial Administrator Account (Available only on fresh install when no admin exists)
+router.post('/setup-admin', (req, res) => {
+  const hasAdmin = Array.from(db.users.values()).some((u) => u.role_id === 'admin');
+  if (hasAdmin) {
+    return res.status(403).json({
+      error: 'Setup has already been completed. An administrator account already exists.',
+      code: 'SETUP_ALREADY_COMPLETED',
+    });
+  }
+
+  const { username, password, email, full_name } = req.body;
+  if (!username || typeof username !== 'string' || username.trim().length < 3) {
+    return res.status(400).json({ error: 'Username must be at least 3 characters long' });
+  }
+  if (!password || typeof password !== 'string' || password.length < 8) {
+    return res.status(400).json({ error: 'Administrator password must be at least 8 characters long' });
+  }
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    return res.status(400).json({ error: 'A valid email address is required' });
+  }
+
+  const adminUser = {
+    id: 'user_admin',
+    username: username.trim().toLowerCase(),
+    email: email.trim().toLowerCase(),
+    password_hash: hashPassword(password),
+    full_name: (full_name && full_name.trim()) || username.trim(),
+    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    role_id: 'admin',
+    is_active: true,
+    created_at: new Date().toISOString(),
+    last_login: new Date().toISOString(),
+  };
+
+  db.users.set(adminUser.id, adminUser);
+  db.saveToDisk();
+  db.logAudit(adminUser.id, 'CREATE', `Initial administrator account '${adminUser.username}' created via setup wizard`, adminUser.id, 'user');
+
+  const token = generateCryptoToken(adminUser.id, adminUser.username);
+  const { password_hash, ...safeUser } = adminUser;
+
+  return res.json({
+    success: true,
+    message: 'Administrator account configured successfully',
+    user: safeUser,
+    token,
+  });
+});
 
 // Get Current Authenticated User & Permissions (/api/core/auth/me)
 router.get('/me', (req: AuthenticatedRequest, res) => {
@@ -111,6 +193,16 @@ router.post('/login', (req, res) => {
     return res.status(403).json({ error: 'User account has been deactivated' });
   }
 
+  // Transparent automatic rehash if work factor is below current target
+  if (needsRehash(user.password_hash)) {
+    user.password_hash = hashPassword(password);
+    db.logAudit(
+      user.id,
+      'CONFIG_CHANGE',
+      `Automatically rehashed password hash to work factor of ${getPbkdf2Iterations()} iterations`
+    );
+  }
+
   user.last_login = new Date().toISOString();
   db.saveToDisk();
   db.logAudit(user.id, 'LOGIN', `User ${user.username} logged in successfully`);
@@ -122,7 +214,7 @@ router.post('/login', (req, res) => {
     success: true,
     user: safeUser,
     token,
-    auth_type: 'PBKDF2-HMAC-SHA256',
+    auth_type: 'PBKDF2-HMAC-SHA512',
   });
 });
 
@@ -171,14 +263,17 @@ router.post('/users', requireAdmin, (req: AuthenticatedRequest, res) => {
   if (!username || !email) {
     return res.status(400).json({ error: 'Username and email are required' });
   }
+  if (!password || typeof password !== 'string' || password.length < 6) {
+    return res.status(400).json({ error: 'A password with a minimum of 6 characters is required' });
+  }
 
   const id = 'user_' + Math.random().toString(36).substring(2, 9);
   const newUser = {
     id,
-    username,
-    email,
-    password_hash: hashPassword(password || 'lifehub123'),
-    full_name: full_name || username,
+    username: username.trim().toLowerCase(),
+    email: email.trim().toLowerCase(),
+    password_hash: hashPassword(password),
+    full_name: (full_name && full_name.trim()) || username.trim(),
     role_id: role_id || 'member',
     is_active: true,
     created_at: new Date().toISOString(),
@@ -186,10 +281,21 @@ router.post('/users', requireAdmin, (req: AuthenticatedRequest, res) => {
 
   db.users.set(id, newUser);
   db.saveToDisk();
-  db.logAudit(req.userId || 'user_admin', 'CREATE', `Created user account ${username}`, id, 'user');
+  db.logAudit(req.userId || 'user_admin', 'CREATE', `Created user account ${newUser.username}`, id, 'user');
 
   const { password_hash, ...rest } = newUser;
   return res.json(rest);
+});
+
+// Seed Demo Data On-Demand (Admin Only)
+router.post('/seed-demo', requireAdmin, (req: AuthenticatedRequest, res) => {
+  const result = db.seedDemoDataOnDemand();
+  db.logAudit(req.userId || 'user_admin', 'CONFIG_CHANGE', 'Explicitly populated demo user accounts and sample entities');
+  return res.json({
+    success: true,
+    message: 'Demo dataset populated successfully',
+    ...result,
+  });
 });
 
 router.put('/users/:id', requireAdmin, (req: AuthenticatedRequest, res) => {

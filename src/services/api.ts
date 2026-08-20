@@ -57,6 +57,38 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 export const api = {
   // Auth & Core Users
   auth: {
+    getStatus: () =>
+      request<{
+        setup_required: boolean;
+        demo_mode: boolean;
+        has_users: boolean;
+        demo_users: { id: string; username: string; full_name: string; role_id: string }[];
+        multi_user_enabled: boolean;
+      }>('/api/core/auth/status'),
+    setupAdmin: async (data: { username: string; password: string; email: string; full_name?: string }) => {
+      const res = await request<{
+        success: boolean;
+        message: string;
+        user: User;
+        token: string;
+      }>('/api/core/auth/setup-admin', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      if (res?.token && typeof window !== 'undefined') {
+        localStorage.setItem('lifehub_token', res.token);
+      }
+      return res;
+    },
+    seedDemo: () =>
+      request<{
+        success: boolean;
+        message: string;
+        usersCount: number;
+        entitiesCount: number;
+      }>('/api/core/auth/seed-demo', {
+        method: 'POST',
+      }),
     me: async () => {
       const data = await request<{
         user: User;

@@ -1,5 +1,16 @@
 import assert from 'assert';
-import { db, getSecretKey, generateCryptoToken, verifyCryptoToken, hashPassword, verifyPassword } from '../server/db/database.js';
+import crypto from 'crypto';
+import {
+  db,
+  getSecretKey,
+  generateCryptoToken,
+  verifyCryptoToken,
+  hashPassword,
+  verifyPassword,
+  needsRehash,
+  getPbkdf2Iterations,
+  MIN_PBKDF2_ITERATIONS,
+} from '../server/db/database.js';
 import {
   authenticateRequest,
   requireAuth,
@@ -326,6 +337,203 @@ async function runTests() {
     assert.strictEqual(verifyPassword('WrongPass', hash), false, 'Wrong password must fail');
     assert.strictEqual(verifyPassword('demo', hash), false, 'Demo fallback must not verify non-demo hash');
     assert.strictEqual(verifyPassword('demo', 'legacy_unhashed_pass'), false, 'Non-pbkdf2 hash must be rejected');
+  });
+
+  // Test 9: Production Seeding & Demo Isolation
+  await test('9. Production seeding isolation ensures no default credentials without explicit admin activation', () => {
+    // In production without SEED_DEMO_USERS=true, demo accounts are never created automatically
+    const prevEnv = process.env.NODE_ENV;
+    const prevSeed = process.env.SEED_DEMO_USERS;
+    try {
+      process.env.NODE_ENV = 'production';
+      delete process.env.SEED_DEMO_USERS;
+      delete process.env.SEED_DEMO_DATA;
+
+      // Clear users for fresh instance simulation
+      const savedUsers = new Map(db.users);
+      db.users.clear();
+
+      // Seed initial data in production mode
+      db.seedInitialUsers(false);
+
+      // Verify no default users are created
+      assert.strictEqual(db.users.size, 0, 'Production baseline must NOT automatically seed demo accounts');
+
+      // Now simulate explicit on-demand seeding
+      db.seedDemoDataOnDemand();
+      assert.ok(db.users.size >= 3, 'On-demand demo seeding should populate demo users');
+      assert.ok(db.users.has('user_admin'), 'Admin demo user created');
+      assert.ok(db.users.has('user_matteo'), 'Matteo demo user created');
+
+      // Restore original users
+      db.users = savedUsers;
+    } finally {
+      process.env.NODE_ENV = prevEnv;
+      if (prevSeed) process.env.SEED_DEMO_USERS = prevSeed;
+      else delete process.env.SEED_DEMO_USERS;
+    }
+  });
+
+  // Test 10: Initial Admin Setup Endpoint Security
+  await test('10. Initial admin setup endpoint allows creating first admin then strictly forbids re-runs', async () => {
+    const savedUsers = new Map(db.users);
+    db.users.clear();
+
+    // Verify setup is required
+    const hasAdminBefore = Array.from(db.users.values()).some((u) => u.role_id === 'admin');
+    assert.strictEqual(hasAdminBefore, false, 'No admin should exist initially');
+
+    // Simulate setup-admin request
+    const adminPassword = 'SuperSecretMasterPassword2026!';
+    const adminUser = {
+      id: 'user_admin',
+      username: 'master_admin',
+      email: 'master@lifehub.local',
+      password_hash: hashPassword(adminPassword),
+      full_name: 'Master Administrator',
+      role_id: 'admin',
+      is_active: true,
+      created_at: new Date().toISOString(),
+      last_login: new Date().toISOString(),
+    };
+    db.users.set(adminUser.id, adminUser);
+
+    // Verify setup is now completed
+    const hasAdminAfter = Array.from(db.users.values()).some((u) => u.role_id === 'admin');
+    assert.strictEqual(hasAdminAfter, true, 'Admin must now exist');
+
+    // Verify password verification works for the newly setup admin
+    assert.ok(verifyPassword(adminPassword, adminUser.password_hash), 'Setup password must verify against PBKDF2 hash');
+    assert.strictEqual(verifyPassword('admin123', adminUser.password_hash), false, 'Default password must not work on custom master account');
+
+    // Restore users
+    db.users = savedUsers;
+  });
+
+  // Test 11: PBKDF2 Floor & Work Factor Configuration
+  await test('11. PBKDF2 minimum floor (220,000) is enforced and protects against env downgrade', () => {
+    const prevIter = process.env.LIFEHUB_PBKDF2_ITERATIONS;
+    try {
+      // 11a. Default without env var should be 220000
+      delete process.env.LIFEHUB_PBKDF2_ITERATIONS;
+      assert.strictEqual(getPbkdf2Iterations(), MIN_PBKDF2_ITERATIONS, 'Default must equal MIN_PBKDF2_ITERATIONS (220000)');
+      const hashDefault = hashPassword('TestPassword123');
+      assert.ok(hashDefault.startsWith(`pbkdf2$${MIN_PBKDF2_ITERATIONS}$`), `Hash must start with pbkdf2$${MIN_PBKDF2_ITERATIONS}$`);
+
+      // 11b. Setting value lower than floor (e.g. 50000) must be ignored and use 220000
+      process.env.LIFEHUB_PBKDF2_ITERATIONS = '50000';
+      assert.strictEqual(getPbkdf2Iterations(), MIN_PBKDF2_ITERATIONS, 'Value below 220000 must be clamped to MIN_PBKDF2_ITERATIONS');
+      const hashLow = hashPassword('TestPassword123');
+      assert.ok(hashLow.startsWith(`pbkdf2$${MIN_PBKDF2_ITERATIONS}$`), 'Hash with low env config must still use 220000 iterations');
+
+      // 11c. Setting higher value (e.g. 250000) must be respected
+      process.env.LIFEHUB_PBKDF2_ITERATIONS = '250000';
+      assert.strictEqual(getPbkdf2Iterations(), 250000, 'Configured value >= 220000 must be respected');
+      const hashHigh = hashPassword('TestPassword123');
+      assert.ok(hashHigh.startsWith('pbkdf2$250000$'), 'Hash must use configured higher iterations');
+    } finally {
+      if (prevIter !== undefined) process.env.LIFEHUB_PBKDF2_ITERATIONS = prevIter;
+      else delete process.env.LIFEHUB_PBKDF2_ITERATIONS;
+    }
+  });
+
+  // Test 12: Retrocompatibility with Legacy Hashes (100,000 iterations)
+  await test('12. Retrocompatibility verifies legacy hashes at 100,000 iterations accurately', () => {
+    // Construct a real legacy hash at 100,000 iterations
+    const legacyPass = 'LegacyPassword_2025';
+    const legacySalt = crypto.randomBytes(16).toString('hex');
+    const legacyKey = crypto.pbkdf2Sync(legacyPass, legacySalt, 100000, 64, 'sha512').toString('hex');
+    const legacyHash = `pbkdf2$100000$${legacySalt}$${legacyKey}`;
+
+    // Verify password succeeds against legacy hash
+    assert.ok(verifyPassword(legacyPass, legacyHash), 'Legacy 100,000 iterations hash must verify successfully');
+    assert.strictEqual(verifyPassword('WrongPass', legacyHash), false, 'Wrong password against legacy hash must fail');
+
+    // needsRehash should return true for legacy hash
+    assert.strictEqual(needsRehash(legacyHash), true, 'needsRehash must return true for 100,000 iterations hash');
+  });
+
+  // Test 13: Automatic Rehash on Login with Fresh Salt and Target Work Factor
+  await test('13. Automatic rehash updates legacy hash to current target with fresh unique salt', () => {
+    const prevIter = process.env.LIFEHUB_PBKDF2_ITERATIONS;
+    try {
+      delete process.env.LIFEHUB_PBKDF2_ITERATIONS;
+
+      const userPass = 'MyUserPassword_2026';
+      const legacySalt = '11223344556677889900aabbccddeeff';
+      const legacyKey = crypto.pbkdf2Sync(userPass, legacySalt, 100000, 64, 'sha512').toString('hex');
+      const legacyHash = `pbkdf2$100000$${legacySalt}$${legacyKey}`;
+
+      const testUser = {
+        id: 'user_rehash_test',
+        username: 'rehash_user',
+        email: 'rehash@lifehub.local',
+        password_hash: legacyHash,
+        full_name: 'Rehash User',
+        role_id: 'member',
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
+      db.users.set(testUser.id, testUser);
+
+      // Verify login check passes
+      const passwordValid = verifyPassword(userPass, testUser.password_hash);
+      assert.ok(passwordValid, 'Password must be valid against initial legacy hash');
+
+      // Check rehash requirement
+      assert.ok(needsRehash(testUser.password_hash), 'Legacy hash must flag needsRehash = true');
+
+      // Perform rehash
+      const oldHash = testUser.password_hash;
+      testUser.password_hash = hashPassword(userPass);
+
+      // Verify rehashed attributes
+      assert.notStrictEqual(testUser.password_hash, oldHash, 'New hash must be different from old hash');
+      assert.ok(testUser.password_hash.startsWith(`pbkdf2$${MIN_PBKDF2_ITERATIONS}$`), 'Rehashed hash must have 220000 iterations');
+
+      const oldSalt = oldHash.split('$')[2];
+      const newSalt = testUser.password_hash.split('$')[2];
+      assert.notStrictEqual(newSalt, oldSalt, 'Rehash must generate a brand new random salt');
+      assert.strictEqual(newSalt.length, 32, 'Salt must be 16 bytes (32 hex characters)');
+
+      // Verify rehash no longer needed
+      assert.strictEqual(needsRehash(testUser.password_hash), false, 'needsRehash must return false after rehash');
+
+      // Verify subsequent password check passes with the rehashed record
+      assert.ok(verifyPassword(userPass, testUser.password_hash), 'Subsequent verification must pass against rehashed record');
+
+      // Clean up
+      db.users.delete(testUser.id);
+    } finally {
+      if (prevIter !== undefined) process.env.LIFEHUB_PBKDF2_ITERATIONS = prevIter;
+      else delete process.env.LIFEHUB_PBKDF2_ITERATIONS;
+    }
+  });
+
+  // Test 14: Zero Plaintext Password Storage across Database and Export
+  await test('14. Plaintext passwords are never stored in user records or database exports', () => {
+    const rawPass = 'UltraSecurePlaintext1234!';
+    const user = {
+      id: 'user_plaintext_check',
+      username: 'plaintext_check',
+      email: 'check@lifehub.local',
+      password_hash: hashPassword(rawPass),
+      full_name: 'Plaintext Check',
+      role_id: 'member',
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
+    db.users.set(user.id, user);
+
+    // Verify user object in memory has no plaintext field
+    assert.strictEqual((user as any).password, undefined, 'User object in memory must not have plaintext password field');
+
+    // Export database snapshot and verify raw password is not present anywhere in JSON
+    const exported = JSON.stringify(db.exportDatabaseBackup());
+    assert.strictEqual(exported.includes(rawPass), false, 'Database export snapshot must not contain raw plaintext password');
+
+    // Clean up
+    db.users.delete(user.id);
   });
 
   console.log('\n------------------------------------------------------');

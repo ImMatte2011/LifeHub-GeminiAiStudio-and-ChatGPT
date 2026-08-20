@@ -35,6 +35,7 @@ export const AuthManagerModal: React.FC<AuthManagerModalProps> = ({
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [newUser, setNewUser] = useState({
     username: '',
     email: '',
@@ -84,13 +85,18 @@ export const AuthManagerModal: React.FC<AuthManagerModalProps> = ({
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUser.username || !newUser.email) return;
+    if (!newUser.password || newUser.password.length < 6) {
+      setCreateError('Password is required (minimum 6 characters)');
+      return;
+    }
+    setCreateError(null);
     try {
       await api.auth.createUser(newUser);
       setIsCreating(false);
       setNewUser({ username: '', email: '', full_name: '', role_id: 'member', password: '' });
       await loadData();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setCreateError(err.message || 'Failed to create user account');
     }
   };
 
@@ -179,6 +185,14 @@ export const AuthManagerModal: React.FC<AuthManagerModalProps> = ({
             {isCreating && (
               <form onSubmit={handleCreateUser} className="p-4 rounded-xl bg-neutral-950 border border-neutral-700 space-y-3 text-xs">
                 <div className="font-semibold text-neutral-200">Create New Account</div>
+
+                {createError && (
+                  <div className="p-2.5 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{createError}</span>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-neutral-400 block mb-1">Username</label>
@@ -203,6 +217,18 @@ export const AuthManagerModal: React.FC<AuthManagerModalProps> = ({
                     />
                   </div>
                   <div>
+                    <label className="text-neutral-400 block mb-1">Password</label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      placeholder="Minimum 6 characters"
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-neutral-900 border border-neutral-700 rounded text-neutral-100"
+                    />
+                  </div>
+                  <div>
                     <label className="text-neutral-400 block mb-1">Full Name</label>
                     <input
                       type="text"
@@ -212,7 +238,7 @@ export const AuthManagerModal: React.FC<AuthManagerModalProps> = ({
                       className="w-full px-2.5 py-1.5 bg-neutral-900 border border-neutral-700 rounded text-neutral-100"
                     />
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="text-neutral-400 block mb-1">Assigned Role</label>
                     <select
                       value={newUser.role_id}

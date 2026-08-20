@@ -76,10 +76,39 @@ export function getSecretKey(): string {
 // ----------------------------------------------------------------------------------
 // Real Cryptographic Security Suite (PBKDF2 Password Hashing & HMAC Session Tokens)
 // ----------------------------------------------------------------------------------
+export const MIN_PBKDF2_ITERATIONS = 220000;
+
+export function getPbkdf2Iterations(): number {
+  const envVal = process.env.LIFEHUB_PBKDF2_ITERATIONS;
+  if (envVal) {
+    const parsed = parseInt(envVal, 10);
+    if (!isNaN(parsed)) {
+      if (parsed < MIN_PBKDF2_ITERATIONS) {
+        console.warn(
+          `[LifeHub Security Warning] Configured LIFEHUB_PBKDF2_ITERATIONS (${parsed}) is below the security floor of ${MIN_PBKDF2_ITERATIONS}. Using minimum floor of ${MIN_PBKDF2_ITERATIONS} iterations instead.`
+        );
+        return MIN_PBKDF2_ITERATIONS;
+      }
+      return parsed;
+    }
+  }
+  return MIN_PBKDF2_ITERATIONS;
+}
+
 export function hashPassword(password: string): string {
+  const iterations = getPbkdf2Iterations();
   const salt = crypto.randomBytes(16).toString('hex');
-  const derivedKey = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
-  return `pbkdf2$100000$${salt}$${derivedKey}`;
+  const derivedKey = crypto.pbkdf2Sync(password, salt, iterations, 64, 'sha512').toString('hex');
+  return `pbkdf2$${iterations}$${salt}$${derivedKey}`;
+}
+
+export function needsRehash(storedHash: string): boolean {
+  if (!storedHash || !storedHash.startsWith('pbkdf2$')) return true;
+  const parts = storedHash.split('$');
+  if (parts.length !== 4) return true;
+  const storedIterations = parseInt(parts[1], 10) || 0;
+  const currentTargetIterations = getPbkdf2Iterations();
+  return storedIterations < currentTargetIterations;
 }
 
 export function verifyPassword(password: string, storedHash: string): boolean {
@@ -92,7 +121,7 @@ export function verifyPassword(password: string, storedHash: string): boolean {
   const parts = storedHash.split('$');
   if (parts.length !== 4) return false;
 
-  const iterations = parseInt(parts[1], 10) || 100000;
+  const iterations = parseInt(parts[1], 10) || MIN_PBKDF2_ITERATIONS;
   const salt = parts[2];
   const originalKey = parts[3];
 
@@ -196,6 +225,13 @@ export function calculateCentroid(points: [number, number][]): [number, number] 
     sumLon += lon;
   }
   return [sumLat / points.length, sumLon / points.length];
+}
+
+export function isDemoSeedEnabled(): boolean {
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.SEED_DEMO_DATA === 'true' || process.env.SEED_DEMO_USERS === 'true';
+  }
+  return process.env.SEED_DEMO_USERS !== 'false';
 }
 
 // ----------------------------------------------------------------------------------
@@ -538,8 +574,10 @@ export class LifeHubDatabase {
     return [...outgoing, ...incoming];
   }
 
-  // Seed Initial Baseline Data
-  public seedInitialData() {
+  // ----------------------------------------------------------------------------------
+  // Seed System Metadata Schema (Always Initialized for Base Engine Operations)
+  // ----------------------------------------------------------------------------------
+  public seedSystemSchema() {
     // 1. Roles
     this.roles.set('admin', {
       id: 'admin',
@@ -560,46 +598,7 @@ export class LifeHubDatabase {
       is_admin: false,
     });
 
-    // 2. Real Cryptographically Hashed Users
-    this.users.set('user_admin', {
-      id: 'user_admin',
-      username: 'admin',
-      email: 'admin@lifehub.local',
-      password_hash: hashPassword('admin123'),
-      full_name: 'System Administrator',
-      avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      role_id: 'admin',
-      is_active: true,
-      created_at: '2026-01-01T00:00:00.000Z',
-      last_login: new Date().toISOString(),
-    });
-
-    this.users.set('user_matteo', {
-      id: 'user_matteo',
-      username: 'matteo',
-      email: 'al3ssandrini.m4tteo@gmail.com',
-      password_hash: hashPassword('matteo123'),
-      full_name: 'Matteo Alessandrini',
-      avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      role_id: 'admin',
-      is_active: true,
-      created_at: '2026-01-02T10:00:00.000Z',
-      last_login: new Date().toISOString(),
-    });
-
-    this.users.set('user_guest', {
-      id: 'user_guest',
-      username: 'guest_visitor',
-      email: 'guest@lifehub.local',
-      password_hash: hashPassword('guest123'),
-      full_name: 'Guest Reviewer',
-      avatar_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-      role_id: 'guest',
-      is_active: true,
-      created_at: '2026-02-01T12:00:00.000Z',
-    });
-
-    // 3. Technical Extensions
+    // 2. Technical Extensions
     const extensionsData: TechnicalExtension[] = [
       {
         id: 'ext_postgis',
@@ -644,7 +643,7 @@ export class LifeHubDatabase {
     ];
     for (const ext of extensionsData) this.extensions.set(ext.id, ext);
 
-    // 4. Core Modules
+    // 3. Core Modules
     const modulesData: CoreModule[] = [
       {
         id: 'people',
@@ -694,7 +693,7 @@ export class LifeHubDatabase {
     ];
     for (const mod of modulesData) this.modules.set(mod.id, mod);
 
-    // 5. Shared Tags
+    // 4. Shared Tags
     const tagsData: SharedTag[] = [
       { id: 'tag_tech', name: 'Technology', color: '#3b82f6' },
       { id: 'tag_hardware', name: 'Hardware', color: '#10b981' },
@@ -706,7 +705,7 @@ export class LifeHubDatabase {
     ];
     for (const tag of tagsData) this.tags.set(tag.id, tag);
 
-    // 6. Link Types (Graph Edges)
+    // 5. Link Types (Graph Edges)
     const linkTypesData: SharedLinkType[] = [
       { id: 'lt_related_to', code: 'related_to', forward_label: 'is related to', reverse_label: 'is related to' },
       { id: 'lt_works_at', code: 'works_at', forward_label: 'works at', reverse_label: 'employs' },
@@ -718,7 +717,7 @@ export class LifeHubDatabase {
     ];
     for (const lt of linkTypesData) this.linkTypes.set(lt.id, lt);
 
-    // 7. Meta Schema (Dynamic Types)
+    // 6. Meta Schema (Dynamic Types)
     const entityTypesData: MetaEntityType[] = [
       {
         id: 'metatype_book',
@@ -755,7 +754,7 @@ export class LifeHubDatabase {
     ];
     for (const et of entityTypesData) this.entityTypes.set(et.id, et);
 
-    // 8. Meta Property Definitions
+    // 7. Meta Property Definitions
     const propDefsData: MetaPropertyDefinition[] = [
       {
         id: 'prop_book_author',
@@ -813,8 +812,85 @@ export class LifeHubDatabase {
       },
     ];
     for (const pd of propDefsData) this.propertyDefinitions.set(pd.id, pd);
+  }
 
-    // 9. Seed Domain Entities: People
+  // ----------------------------------------------------------------------------------
+  // Seed Users (Production Environment Bootstrap vs Demo Accounts)
+  // ----------------------------------------------------------------------------------
+  public seedInitialUsers(forceDemo = false) {
+    const adminUserEnv = process.env.LIFEHUB_ADMIN_USERNAME || process.env.ADMIN_USERNAME;
+    const adminPassEnv = process.env.LIFEHUB_ADMIN_PASSWORD || process.env.INITIAL_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
+
+    if (adminUserEnv && adminPassEnv && adminPassEnv.trim().length >= 6) {
+      const username = adminUserEnv.trim().toLowerCase();
+      this.users.set('user_admin', {
+        id: 'user_admin',
+        username,
+        email: process.env.LIFEHUB_ADMIN_EMAIL || `${username}@lifehub.local`,
+        password_hash: hashPassword(adminPassEnv.trim()),
+        full_name: process.env.LIFEHUB_ADMIN_FULLNAME || 'System Administrator',
+        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        role_id: 'admin',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        last_login: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // Only seed demo users if demo mode is enabled or explicitly forced (development only)
+    if (isDemoSeedEnabled() || forceDemo) {
+      this.users.set('user_admin', {
+        id: 'user_admin',
+        username: 'admin',
+        email: 'admin@lifehub.local',
+        password_hash: hashPassword('admin123'),
+        full_name: 'System Administrator',
+        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        role_id: 'admin',
+        is_active: true,
+        created_at: '2026-01-01T00:00:00.000Z',
+        last_login: new Date().toISOString(),
+      });
+
+      this.users.set('user_matteo', {
+        id: 'user_matteo',
+        username: 'matteo',
+        email: 'al3ssandrini.m4tteo@gmail.com',
+        password_hash: hashPassword('matteo123'),
+        full_name: 'Matteo Alessandrini',
+        avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+        role_id: 'admin',
+        is_active: true,
+        created_at: '2026-01-02T10:00:00.000Z',
+        last_login: new Date().toISOString(),
+      });
+
+      this.users.set('user_guest', {
+        id: 'user_guest',
+        username: 'guest_visitor',
+        email: 'guest@lifehub.local',
+        password_hash: hashPassword('guest123'),
+        full_name: 'Guest Reviewer',
+        avatar_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+        role_id: 'guest',
+        is_active: true,
+        created_at: '2026-02-01T12:00:00.000Z',
+      });
+    }
+    // In clean production mode without env vars or demo flag, users table remains empty
+    // until initial admin completes the setup wizard.
+  }
+
+  // ----------------------------------------------------------------------------------
+  // Seed Demo Entities (Only for Development / Demo Mode)
+  // ----------------------------------------------------------------------------------
+  public seedDemoEntities(forceDemo = false) {
+    if (!isDemoSeedEnabled() && !forceDemo) {
+      return;
+    }
+
+    // Seed Domain Entities: People
     const peopleData: (PeoplePerson & { contacts: PeopleContact[]; tags: string[] })[] = [
       {
         id: 'person_matteo',
@@ -908,7 +984,7 @@ export class LifeHubDatabase {
       for (const t of p.tags) this.addEntityTag(p.id, t);
     }
 
-    // 10. Seed Domain Entities: Places
+    // Seed Domain Entities: Places
     const placesData: (PlacesPlace & { tags: string[] })[] = [
       {
         id: 'place_home_lab',
@@ -956,7 +1032,7 @@ export class LifeHubDatabase {
       for (const t of pl.tags) this.addEntityTag(pl.id, t);
     }
 
-    // 11. Seed Domain Entities: Events
+    // Seed Domain Entities: Events
     const eventsData: (EventsEvent & { participants: string[]; tags: string[] })[] = [
       {
         id: 'event_lifehub_launch',
@@ -1008,7 +1084,7 @@ export class LifeHubDatabase {
       for (const t of ev.tags) this.addEntityTag(ev.id, t);
     }
 
-    // 12. Seed Domain Entities: Knowledge Items (Meta Layer)
+    // Seed Domain Entities: Knowledge Items (Meta Layer)
     const knowledgeData = [
       {
         id: 'know_clean_arch',
@@ -1069,7 +1145,7 @@ export class LifeHubDatabase {
       for (const t of kn.tags) this.addEntityTag(kn.id, t);
     }
 
-    // 13. Seed Domain Entities: Buildings (Validation of Reusability / Phase 12)
+    // Seed Domain Entities: Buildings (Validation of Reusability / Phase 12)
     const building: BuildingsBuilding = {
       id: 'bld_server_facility',
       name: 'LifeHub Primary Server Hub & Workshop',
@@ -1086,17 +1162,40 @@ export class LifeHubDatabase {
     this.buildings.set(building.id, building);
     this.addEntityTag(building.id, 'tag_hardware');
 
-    // 14. Universal Cross-Entity Links
+    // Universal Cross-Entity Links
     this.addLink('person_matteo', 'know_clean_arch', 'lt_related_to', 'Architectural reference for LifeHub Core design');
     this.addLink('person_matteo', 'place_home_lab', 'lt_works_at', 'Primary workspace and lab');
     this.addLink('event_lifehub_launch', 'place_home_lab', 'lt_located_at', 'Hosted in the primary lab');
     this.addLink('bld_server_facility', 'person_matteo', 'lt_manages', 'Managed by lead architect');
 
-    // 15. Audit Log Seed
+    // Audit Log Seed
     this.logAudit('user_admin', 'CONFIG_CHANGE', 'LifeHub instance initialized with Core, Meta, and Shared layers active.');
     this.logAudit('user_matteo', 'CREATE', 'Created Person record: Matteo Alessandrini', 'person_matteo', 'person');
     this.logAudit('user_matteo', 'CREATE', 'Created Place record: Home Office & Pi Cluster Lab', 'place_home_lab', 'place');
     this.logAudit('user_matteo', 'CREATE', 'Created Knowledge item: Clean Architecture', 'know_clean_arch', 'knowledge_item');
+  }
+
+  // ----------------------------------------------------------------------------------
+  // Master Initial Seed Entry Point
+  // ----------------------------------------------------------------------------------
+  public seedInitialData(forceDemo = false) {
+    this.seedSystemSchema();
+    this.seedInitialUsers(forceDemo);
+    this.seedDemoEntities(forceDemo);
+  }
+
+  /**
+   * On-demand explicit action to seed demo dataset (development or testing only)
+   */
+  public seedDemoDataOnDemand() {
+    this.seedInitialUsers(true);
+    this.seedDemoEntities(true);
+    this.saveToDisk();
+    return {
+      success: true,
+      usersCount: this.users.size,
+      entitiesCount: this.entities.size,
+    };
   }
 
   // Backup & Restore
