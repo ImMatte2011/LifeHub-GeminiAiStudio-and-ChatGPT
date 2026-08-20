@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx test/auth-isolation.test.ts && tsx test/repository-driver.test.ts"
+    "test": "tsx test/auth-isolation.test.ts && tsx test/repository-driver.test.ts && tsx test/auth-migration.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

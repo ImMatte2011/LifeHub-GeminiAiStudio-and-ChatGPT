@@ -1370,3 +1370,183 @@ export class PostgresExtensionsRepository implements IExtensionsRepository {
     return this.getByCode(code);
   }
 }
+
+/**
+ * Ensures foundational system baseline records (roles, permissions, extensions, settings, link types, meta types)
+ * are populated when connecting to a fresh PostgreSQL instance.
+ */
+export async function ensurePostgresBaselineSeeded(): Promise<void> {
+  try {
+    // 1. Roles
+    await drizzleDb
+      .insert(schema.roles)
+      .values([
+        {
+          id: 'admin',
+          name: 'Administrator',
+          description: 'Full system control, module configuration, user management and audit log access',
+          isAdmin: true,
+        },
+        {
+          id: 'member',
+          name: 'Member',
+          description: 'Can create and edit entities across all enabled modules',
+          isAdmin: false,
+        },
+        {
+          id: 'guest',
+          name: 'Guest (Read Only)',
+          description: 'Can view enabled modules and search items',
+          isAdmin: false,
+        },
+      ])
+      .onConflictDoNothing();
+
+    const permKeys = ['read', 'write', 'delete', 'admin', 'export', 'audit', 'manage_users'];
+    const permsToInsert: Array<{ id: string; roleId: string; permissionKey: string; allowed: boolean }> = [];
+    for (const pk of permKeys) {
+      permsToInsert.push({ id: `perm_admin_${pk}`, roleId: 'admin', permissionKey: pk, allowed: true });
+      permsToInsert.push({
+        id: `perm_member_${pk}`,
+        roleId: 'member',
+        permissionKey: pk,
+        allowed: ['read', 'write', 'delete', 'export'].includes(pk),
+      });
+      permsToInsert.push({
+        id: `perm_guest_${pk}`,
+        roleId: 'guest',
+        permissionKey: pk,
+        allowed: ['read', 'export'].includes(pk),
+      });
+    }
+    await drizzleDb.insert(schema.rolePermissions).values(permsToInsert).onConflictDoNothing();
+
+    // 2. Settings
+    await drizzleDb
+      .insert(schema.settings)
+      .values([
+        { key: 'multi_user_enabled', value: true, description: 'Allow multiple user accounts', updatedAt: new Date() },
+        { key: 'default_role', value: 'member', description: 'Default role for new users', updatedAt: new Date() },
+        { key: 'allow_registration', value: false, description: 'Allow public self-registration', updatedAt: new Date() },
+        { key: 'storage_quota_mb', value: 4096, description: 'Instance storage quota in MB', updatedAt: new Date() },
+        { key: 'language', value: 'it', description: 'System interface language', updatedAt: new Date() },
+      ])
+      .onConflictDoNothing();
+
+    // 3. Technical Extensions
+    await drizzleDb
+      .insert(schema.technicalExtensions)
+      .values([
+        {
+          id: 'ext_postgis',
+          code: 'maps',
+          name: 'PostGIS Spatial Engine',
+          type: 'atomic',
+          description: 'Enables spatial queries, geographic indexing, and interactive mapping features.',
+          isEnabled: true,
+          version: '3.4.1',
+          status: 'active',
+        },
+        {
+          id: 'ext_pg_trgm',
+          code: 'pg_trgm',
+          name: 'pg_trgm Full-Text & Fuzzy Search',
+          type: 'atomic',
+          description: 'Trigram fuzzy text search across all notes, contact profiles, and knowledge properties.',
+          isEnabled: true,
+          version: '1.6',
+          status: 'active',
+        },
+        {
+          id: 'ext_timescale',
+          code: 'timescale',
+          name: 'TimescaleDB Temporal Series',
+          type: 'atomic',
+          description: 'Optimized time-series database chunks for IoT sensor telemetry and health tracking.',
+          isEnabled: false,
+          version: '2.14.0',
+          status: 'disabled',
+        },
+        {
+          id: 'ext_pgvector',
+          code: 'pgvector',
+          name: 'pgvector Semantic Embeddings',
+          type: 'atomic',
+          description: 'Vector similarity search for local AI semantic second brain retrieval.',
+          isEnabled: false,
+          version: '0.6.0',
+          status: 'disabled',
+        },
+      ])
+      .onConflictDoNothing();
+
+    // 4. Shared Tags
+    await drizzleDb
+      .insert(schema.sharedTags)
+      .values([
+        { id: 'tag_tech', name: 'Technology', color: '#3b82f6' },
+        { id: 'tag_hardware', name: 'Hardware', color: '#10b981' },
+        { id: 'tag_work', name: 'Work', color: '#8b5cf6' },
+        { id: 'tag_personal', name: 'Personal', color: '#f59e0b' },
+        { id: 'tag_travel', name: 'Travel', color: '#ec4899' },
+        { id: 'tag_urgent', name: 'Urgent', color: '#ef4444' },
+        { id: 'tag_culinary', name: 'Culinary', color: '#14b8a6' },
+      ])
+      .onConflictDoNothing();
+
+    // 5. Shared Link Types
+    await drizzleDb
+      .insert(schema.sharedLinkTypes)
+      .values([
+        { id: 'lt_related_to', code: 'related_to', forwardLabel: 'is related to', reverseLabel: 'is related to' },
+        { id: 'lt_works_at', code: 'works_at', forwardLabel: 'works at', reverseLabel: 'employs' },
+        { id: 'lt_located_at', code: 'located_at', forwardLabel: 'is located at', reverseLabel: 'hosts' },
+        { id: 'lt_participates_in', code: 'participates_in', forwardLabel: 'participates in', reverseLabel: 'has participant' },
+        { id: 'lt_manages', code: 'manages', forwardLabel: 'manages', reverseLabel: 'is managed by' },
+        { id: 'lt_owns', code: 'owns', forwardLabel: 'owns', reverseLabel: 'is owned by' },
+        { id: 'lt_friend_of', code: 'friend_of', forwardLabel: 'is friend of', reverseLabel: 'is friend of' },
+      ])
+      .onConflictDoNothing();
+
+    // 6. Meta Entity Types
+    await drizzleDb
+      .insert(schema.metaEntityTypes)
+      .values([
+        {
+          id: 'metatype_book',
+          name: 'Book',
+          code: 'book',
+          icon: 'BookOpen',
+          description: 'Literature, manuals, and study guides with ISBN and rating',
+          schemaVersion: 1,
+        },
+        {
+          id: 'metatype_hardware_gear',
+          name: 'Hardware & Gear',
+          code: 'hardware_gear',
+          icon: 'Cpu',
+          description: 'Computing hardware, SBCs, tools, and electronics with serial numbers',
+          schemaVersion: 1,
+        },
+        {
+          id: 'metatype_software_app',
+          name: 'Software & Tools',
+          code: 'software_app',
+          icon: 'Code2',
+          description: 'Software repositories, desktop tools, and self-hosted docker images',
+          schemaVersion: 1,
+        },
+        {
+          id: 'metatype_recipe',
+          name: 'Culinary Recipe',
+          code: 'recipe',
+          icon: 'Utensils',
+          description: 'Cooking ingredients, preparation steps, and dietary tags',
+          schemaVersion: 1,
+        },
+      ])
+      .onConflictDoNothing();
+  } catch (err) {
+    console.warn('[Postgres Baseline Seed Warning]:', err);
+  }
+}

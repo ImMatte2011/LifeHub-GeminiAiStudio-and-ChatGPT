@@ -595,7 +595,12 @@ export class MemorySettingsRepository implements ISettingsRepository {
   constructor(private db: LifeHubDatabase = defaultDb) {}
 
   async get(key: string): Promise<any> {
-    return this.db.settings.get(key)?.value;
+    const setting = this.db.settings.get(key);
+    if (setting !== undefined) return setting.value;
+    if (this.db.instanceConfig && this.db.instanceConfig.settings && key in this.db.instanceConfig.settings) {
+      return (this.db.instanceConfig.settings as any)[key];
+    }
+    return undefined;
   }
 
   async set(key: string, value: any, description = ''): Promise<CoreSetting> {

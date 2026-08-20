@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { db, verifyCryptoToken } from '../db/database.js';
+import { verifyCryptoToken } from '../db/database.js';
 import { CoreUser } from '../db/types.js';
+import { repositories } from '../repositories/index.js';
 
 export interface AuthenticatedRequest extends Request {
   user?: CoreUser;
@@ -12,60 +13,72 @@ export interface AuthenticatedRequest extends Request {
 /**
  * Extracts and verifies bearer token from incoming request.
  * Populates req.user, req.userId, req.userRole, req.isAdmin strictly on the request object.
- * Does NOT rely on any global or process-level mutable state.
+ * Reads user and role records exclusively from the configured repository adapter.
  */
-export function authenticateRequest(
+export async function authenticateRequest(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-): void {
-  const authHeader = req.headers.authorization || (req.headers['x-auth-token'] as string);
-  let token: string | undefined;
+): Promise<void> {
+  try {
+    const authHeader = req.headers.authorization || (req.headers['x-auth-token'] as string);
+    let token: string | undefined;
 
-  if (authHeader) {
-    if (authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7).trim();
-    } else {
-      token = authHeader.trim();
+    if (authHeader) {
+      if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7).trim();
+      } else {
+        token = authHeader.trim();
+      }
     }
-  }
 
-  if (token) {
-    const verified = verifyCryptoToken(token);
-    if (verified.valid && verified.payload && verified.payload.sub) {
-      const user = db.users.get(verified.payload.sub);
-      if (user) {
-        req.user = user;
-        req.userId = user.id;
-        req.userRole = user.role_id;
-        const role = db.roles.get(user.role_id);
-        req.isAdmin = (role?.is_admin ?? user.role_id === 'admin') && user.is_active;
+    if (token) {
+      const verified = verifyCryptoToken(token);
+      if (verified.valid && verified.payload && verified.payload.sub) {
+        const user = await repositories.users.getById(verified.payload.sub);
+        if (user) {
+          req.user = user;
+          req.userId = user.id;
+          req.userRole = user.role_id;
+          const role = await repositories.roles.getRoleById(user.role_id);
+          req.isAdmin = (role?.is_admin ?? user.role_id === 'admin') && user.is_active;
+          return next();
+        }
+      }
+    }
+
+    // If no valid token provided:
+    // In single-user mode, default to the main active admin user if available
+    const multiUserSetting = await repositories.settings.get('multi_user_enabled');
+    const multiUserEnabled = multiUserSetting !== undefined ? multiUserSetting : true;
+    if (!multiUserEnabled) {
+      const allUsers = await repositories.users.getAll();
+      const defaultUser =
+        allUsers.find((u) => u.is_active && u.role_id === 'admin') ||
+        allUsers[0];
+      if (defaultUser) {
+        req.user = defaultUser;
+        req.userId = defaultUser.id;
+        req.userRole = defaultUser.role_id;
+        req.isAdmin = true;
         return next();
       }
     }
-  }
 
-  // If no valid token provided:
-  // In single-user mode, default to the main active admin user if available
-  const multiUserEnabled = db.instanceConfig.settings?.multi_user_enabled ?? true;
-  if (!multiUserEnabled) {
-    const defaultUser = Array.from(db.users.values()).find((u) => u.is_active && u.role_id === 'admin') ||
-      Array.from(db.users.values())[0];
-    if (defaultUser) {
-      req.user = defaultUser;
-      req.userId = defaultUser.id;
-      req.userRole = defaultUser.role_id;
-      req.isAdmin = true;
-      return next();
-    }
+    // Otherwise unauthenticated request
+    req.user = undefined;
+    req.userId = undefined;
+    req.userRole = undefined;
+    req.isAdmin = false;
+    return next();
+  } catch (err) {
+    console.error('[LifeHub Auth Middleware] Error authenticating request:', err);
+    req.user = undefined;
+    req.userId = undefined;
+    req.userRole = undefined;
+    req.isAdmin = false;
+    return next();
   }
-
-  // Otherwise unauthenticated request
-  req.user = undefined;
-  req.userId = undefined;
-  req.userRole = undefined;
-  req.isAdmin = false;
-  return next();
 }
 
 /**

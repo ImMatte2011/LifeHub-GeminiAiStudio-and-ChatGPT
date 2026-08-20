@@ -315,18 +315,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Footer info */}
-        <div className="p-4 border-t border-slate-800/80 space-y-2">
-          <button
-            type="button"
-            onClick={() => handleOpenSettings('general')}
-            className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold flex items-center justify-center gap-2 border border-slate-800 transition-colors"
-          >
-            <Settings className="w-3.5 h-3.5 text-blue-400" />
-            <span>{t.sidebar.configureInstance}</span>
-          </button>
-        </div>
       </aside>
     </>
   );

@@ -42,6 +42,7 @@ import {
   PostgresAuditRepository,
   PostgresSettingsRepository,
   PostgresExtensionsRepository,
+  ensurePostgresBaselineSeeded,
 } from './postgres/PostgresRepository.js';
 import { db as inMemoryDb } from '../db/database.js';
 
@@ -50,23 +51,31 @@ export type PersistenceDriver = 'memory' | 'postgres';
 export class RepositoryManager {
   private driver: PersistenceDriver;
 
-  public users: IUserRepository;
-  public roles: IRoleRepository;
-  public entities: IEntityRepository;
-  public meta: IMetaRepository;
-  public shared: ISharedRepository;
-  public people: IPeopleRepository;
-  public places: IPlacesRepository;
-  public events: IEventsRepository;
-  public knowledge: IKnowledgeRepository;
-  public buildings: IBuildingsRepository;
-  public audit: IAuditRepository;
-  public settings: ISettingsRepository;
-  public extensions: IExtensionsRepository;
+  public users!: IUserRepository;
+  public roles!: IRoleRepository;
+  public entities!: IEntityRepository;
+  public meta!: IMetaRepository;
+  public shared!: ISharedRepository;
+  public people!: IPeopleRepository;
+  public places!: IPlacesRepository;
+  public events!: IEventsRepository;
+  public knowledge!: IKnowledgeRepository;
+  public buildings!: IBuildingsRepository;
+  public audit!: IAuditRepository;
+  public settings!: ISettingsRepository;
+  public extensions!: IExtensionsRepository;
 
-  constructor(driver: PersistenceDriver = 'memory') {
+  constructor(driver?: PersistenceDriver) {
+    this.driver = driver || (process.env.PERSISTENCE_DRIVER as PersistenceDriver) || 'memory';
+    this.initRepositories(this.driver);
+  }
+
+  public setDriver(driver: PersistenceDriver): void {
     this.driver = driver;
+    this.initRepositories(driver);
+  }
 
+  private initRepositories(driver: PersistenceDriver): void {
     if (driver === 'postgres') {
       this.users = new PostgresUserRepository();
       this.roles = new PostgresRoleRepository();
@@ -81,6 +90,11 @@ export class RepositoryManager {
       this.audit = new PostgresAuditRepository();
       this.settings = new PostgresSettingsRepository();
       this.extensions = new PostgresExtensionsRepository();
+
+      // Ensure baseline rows are populated asynchronously without blocking startup
+      ensurePostgresBaselineSeeded().catch((err) => {
+        console.warn('[RepositoryManager] PostgreSQL baseline seed warning:', err);
+      });
     } else {
       this.users = new MemoryUserRepository(inMemoryDb);
       this.roles = new MemoryRoleRepository(inMemoryDb);
@@ -104,8 +118,6 @@ export class RepositoryManager {
 }
 
 // Singleton repository manager
-export const repositories = new RepositoryManager(
-  (process.env.PERSISTENCE_DRIVER as PersistenceDriver) || 'memory'
-);
+export const repositories = new RepositoryManager();
 
 export * from './interfaces.js';

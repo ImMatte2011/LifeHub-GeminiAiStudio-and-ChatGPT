@@ -17,6 +17,7 @@ import {
   requireAdmin,
   AuthenticatedRequest,
 } from '../server/middleware/auth.js';
+import { repositories } from '../server/repositories/index.js';
 
 // Simple lightweight test runner
 let passedTests = 0;
@@ -73,6 +74,8 @@ function createMockResponse() {
 }
 
 async function runTests() {
+  repositories.setDriver('memory');
+
   console.log('\n======================================================');
   console.log('  LifeHub Authentication & User Isolation Test Suite');
   console.log('======================================================\n');
@@ -190,7 +193,7 @@ async function runTests() {
     const resAlice = createMockResponse();
 
     let nextCalledAlice = false;
-    authenticateRequest(reqAlice, resAlice, () => {
+    await authenticateRequest(reqAlice, resAlice, () => {
       nextCalledAlice = true;
     });
 
@@ -239,7 +242,7 @@ async function runTests() {
       await new Promise((resolve) => setTimeout(resolve, Math.random() * 20));
 
       let nextDone = false;
-      authenticateRequest(req, res, () => {
+      await authenticateRequest(req, res, () => {
         nextDone = true;
       });
 
@@ -254,13 +257,13 @@ async function runTests() {
   });
 
   // Test 6: Route Guards (requireAuth & requireAdmin)
-  await test('6. Route guards strictly enforce authentication and authorization rules', () => {
+  await test('6. Route guards strictly enforce authentication and authorization rules', async () => {
     // 6a. Unauthenticated request blocked by requireAuth
     const unauthReq = createMockRequest();
     const unauthRes = createMockResponse();
     let authNextCalled = false;
     
-    authenticateRequest(unauthReq, unauthRes, () => {});
+    await authenticateRequest(unauthReq, unauthRes, () => {});
     requireAuth(unauthReq, unauthRes, () => { authNextCalled = true; });
 
     assert.strictEqual(authNextCalled, false, 'Unauthenticated request must not pass requireAuth');
@@ -272,7 +275,7 @@ async function runTests() {
     const userRes = createMockResponse();
     let adminNextCalled = false;
 
-    authenticateRequest(userReq, userRes, () => {});
+    await authenticateRequest(userReq, userRes, () => {});
     requireAdmin(userReq, userRes, () => { adminNextCalled = true; });
 
     assert.strictEqual(adminNextCalled, false, 'Non-admin user must not pass requireAdmin');
@@ -284,7 +287,7 @@ async function runTests() {
     const adminRes = createMockResponse();
     let adminPassed = false;
 
-    authenticateRequest(adminReq, adminRes, () => {});
+    await authenticateRequest(adminReq, adminRes, () => {});
     requireAdmin(adminReq, adminRes, () => { adminPassed = true; });
 
     assert.ok(adminPassed, 'Admin user must pass requireAdmin');
@@ -305,7 +308,7 @@ async function runTests() {
     const disabledRes = createMockResponse();
     let disabledPassed = false;
 
-    authenticateRequest(disabledReq, disabledRes, () => {});
+    await authenticateRequest(disabledReq, disabledRes, () => {});
     requireAuth(disabledReq, disabledRes, () => { disabledPassed = true; });
 
     assert.strictEqual(disabledPassed, false, 'Disabled user must not pass requireAuth');
