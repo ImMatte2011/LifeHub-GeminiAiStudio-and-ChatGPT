@@ -1,17 +1,48 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lifehub_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${SQL_USER:-lifehub}
+      POSTGRES_PASSWORD: ${SQL_PASSWORD:-lifehub_secret_pass}
+      POSTGRES_DB: ${SQL_DB_NAME:-lifehub_primary}
+    ports:
+      - "5432:5432"
+    volumes:
+      - lifehub_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SQL_USER:-lifehub} -d ${SQL_DB_NAME:-lifehub_primary}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
   lifehub:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: lifehub
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - SQL_HOST=postgres
+      - SQL_PORT=5432
+      - SQL_USER=${SQL_USER:-lifehub}
+      - SQL_PASSWORD=${SQL_PASSWORD:-lifehub_secret_pass}
+      - SQL_DB_NAME=${SQL_DB_NAME:-lifehub_primary}
       - INSTANCE_CONFIG_PATH=/data/instance.yaml
     volumes:
       - lifehub_data:/data
@@ -28,4 +59,6 @@ services:
 
 volumes:
   lifehub_data:
+    driver: local
+  lifehub_pgdata:
     driver: local

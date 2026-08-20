@@ -1,21 +1,30 @@
-import { db } from './index.ts';
-import { users } from './schema.ts';
+import { db } from './index.js';
+import { users } from './schema.js';
 import { eq } from 'drizzle-orm';
 
-export async function getOrCreateUser(uid: string, email: string, fullName?: string, avatarUrl?: string) {
+export async function getOrCreateUser(
+  id: string,
+  email: string,
+  fullName: string,
+  passwordHash: string,
+  roleId: string = 'member',
+  avatarUrl?: string
+) {
   try {
-    const result = await db.insert(users)
+    const result = await db
+      .insert(users)
       .values({
-        uid,
-        username: email.split('@')[0] || uid,
+        id,
+        username: email.split('@')[0] || id,
         email,
+        passwordHash,
         fullName: fullName || email.split('@')[0],
         avatarUrl: avatarUrl || '',
-        roleId: 'member',
+        roleId,
         isActive: true,
       })
       .onConflictDoUpdate({
-        target: users.uid,
+        target: users.id,
         set: {
           email,
           fullName: fullName || email.split('@')[0],
@@ -27,8 +36,8 @@ export async function getOrCreateUser(uid: string, email: string, fullName?: str
 
     return result[0];
   } catch (error) {
-    console.error('Database query getOrCreateUser failed:', error);
-    throw new Error('Database query failed. Please try again later.', { cause: error });
+    console.error('PostgreSQL query getOrCreateUser failed:', error);
+    throw new Error('Database query failed.', { cause: error });
   }
 }
 
@@ -36,7 +45,17 @@ export async function getAllUsers() {
   try {
     return await db.select().from(users);
   } catch (error) {
-    console.error('Database query getAllUsers failed:', error);
-    throw new Error('Database query failed. Please try again later.', { cause: error });
+    console.error('PostgreSQL query getAllUsers failed:', error);
+    throw new Error('Database query failed.', { cause: error });
+  }
+}
+
+export async function getUserById(id: string) {
+  try {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0] || null;
+  } catch (error) {
+    console.error('PostgreSQL query getUserById failed:', error);
+    throw new Error('Database query failed.', { cause: error });
   }
 }
